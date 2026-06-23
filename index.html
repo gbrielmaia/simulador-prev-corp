@@ -69,6 +69,12 @@
   table.cmptab tr.total td { border-top:1px solid var(--rule-strong); font-weight:600; color:var(--ink); }
   table.cmptab td.gold { color:var(--gold-deep); font-weight:600; }
   table.cmptab tr:last-child td { border-bottom:none; }
+  .vrec { margin-top:12px; padding:11px 13px; background:var(--accent-bg); border-left:2px solid var(--gold); }
+  .vrec .vk { font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold-deep); font-weight:600; }
+  .vrec .big { font-family:'Fraunces',serif; font-size:19px; color:var(--gold-deep); margin-top:4px; line-height:1.1; }
+  .vrec .big .med { font-family:'Inter',sans-serif; font-size:10px; color:var(--ink-mute); }
+  .vrec .vd { font-size:10px; line-height:1.5; color:var(--ink-soft); margin-top:6px; }
+  .vrec .vd b { color:var(--ink); }
   .toggle { display:inline-flex; border:1px solid var(--rule-strong); }
   .toggle button { font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:5px 11px; background:#fff; border:none; cursor:pointer; color:var(--ink-soft); }
   .toggle button.on { background:var(--gold); color:#fff; }
@@ -261,6 +267,9 @@
           <div class="ft">Vesting · liberação da parte da empresa (meses)</div>
           <table class="ftab" id="ftVesting"></table>
           <div class="hint">Define quanto do saldo aportado pela empresa o colaborador leva ao sair, por tempo de plano. Não afeta a economia tributária; governa a retenção.</div>
+          <div class="field" style="margin-top:8px;"><label>Rotatividade — % que saem</label><div class="ctl"><input type="number" id="turnover" value="20" step="5"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Anos até a saída (do 1º aporte)</label><div class="ctl"><input type="number" id="anosSaida" value="5" step="1"><span class="suffix">anos</span></div></div>
+          <div class="vrec" id="vestRec"></div>
         </div>
       </div>
 
@@ -338,6 +347,7 @@ const ALIQUOTA_DEDUCAO = 0.34, TETO_FOLHA = 0.20, MESES_ANO = 12;
 const state = {
   tipo: 1, modelo: 1, taxa: 0.08, idadeAlvo: 65,
   faturamento: 0, folhaTotal: 0, irpjCsll: 0,
+  turnover: 0.20, anosSaida: 5,
   pctUnico: 0.06, matchingUnico: 1.00, matchPlano: 1.00,
   pctEmpresaInst: 0.03, instFatorEtario: false,
   faixasSalariais: [[7000,0.06],[15000,0.06],[25000,0.06],[INF,0.06]],
@@ -513,11 +523,35 @@ function recompute(){
   }
 
   renderComparativo(c);
+  renderVesting();
 
   const grupos = saldoPorGrupo();
   document.getElementById('curvaTit').textContent = `por pessoa, até os ${state.idadeAlvo} anos · rent. 8%/ano`;
   drawGroupBars(grupos);
   drawBars(c);
+}
+
+/* ===================== RECUPERAÇÃO DE VESTING ===================== */
+function renderVesting(){
+  const box = document.getElementById('vestRec');
+  const anos = state.anosSaida, meses = anos * 12;
+  const vest = vestingPct(meses), naoVestido = 1 - vest;
+  let total = 0, leavers = 0;
+  for (const r of state.roster){
+    const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
+    const aporteEmpAnual = ap.empresa * MESES_ANO;
+    // saldo financiado pela empresa para cada pessoa, após 'anos' anos (capitalização 8% a.a.)
+    let saldoEmp = 0;
+    for (let t=0; t<anos; t++) saldoEmp = saldoEmp * (1 + state.taxa) + aporteEmpAnual;
+    const saem = state.turnover * r.qtde;
+    total += saem * naoVestido * saldoEmp;   // só a parcela NÃO vestida volta para a empresa
+    leavers += saem;
+  }
+  const anual = anos > 0 ? total / anos : 0;
+  box.innerHTML =
+    '<div class="vk">Recuperação de vesting · empresa</div>'+
+    `<div class="big">${fmtBRLk(anual)}/ano <span class="med">(média em ${anos} ${anos===1?'ano':'anos'})</span></div>`+
+    `<div class="vd">${fmtPct0(state.turnover)} dos colaboradores saem em ${anos} ${anos===1?'ano':'anos'} → vesting de ${fmtPct0(vest)}; a empresa recupera <b>${fmtPct0(naoVestido)}</b> do saldo patronal de cada um que sai. Total recuperado no evento: <b>${fmtBRL0.format(total)}</b> · ${Math.round(leavers)} ${Math.round(leavers)===1?'pessoa':'pessoas'}.</div>`;
 }
 
 /* ===================== COMPARATIVO SEM/COM PREVIDÊNCIA ===================== */
@@ -613,6 +647,8 @@ function wireParams(){
   ['faturamento','folhaTotal','irpjCsll'].forEach(id => {
     document.getElementById(id).addEventListener('input', e => { state[id] = parseFloat(e.target.value)||0; recompute(); });
   });
+  document.getElementById('turnover').addEventListener('input', e => { state.turnover = (parseFloat(e.target.value)||0)/100; recompute(); });
+  document.getElementById('anosSaida').addEventListener('input', e => { state.anosSaida = Math.max(0, parseInt(e.target.value,10)||0); recompute(); });
 
   document.getElementById('tipoToggle').addEventListener('click', e => {
     const b = e.target.closest('button[data-tipo]'); if(!b) return;
