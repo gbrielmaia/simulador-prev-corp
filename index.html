@@ -174,8 +174,8 @@
           <label>Modelo de custeio</label>
           <div class="ctl">
             <select id="modelo">
-              <option value="1">1 · Contrapartida básica</option>
-              <option value="2" selected>2 · Faixa salarial</option>
+              <option value="1" selected>1 · Contrapartida básica</option>
+              <option value="2">2 · Faixa salarial</option>
               <option value="3">3 · Matching por idade</option>
               <option value="4">4 · Matching por tempo</option>
               <option value="5">5 · Instituído</option>
@@ -204,7 +204,7 @@
         <!-- modelo 1 -->
         <div class="field m-only m1">
           <label>Aporte único do colaborador</label>
-          <div class="ctl"><input type="number" id="pctUnico" value="5" step="1"><span class="suffix">%</span></div>
+          <div class="ctl"><input type="number" id="pctUnico" value="6" step="1"><span class="suffix">%</span></div>
         </div>
         <div class="field m-only m1">
           <label>Matching único da empresa</label>
@@ -318,8 +318,8 @@ const INF = Infinity;
 const ALIQUOTA_DEDUCAO = 0.34, TETO_FOLHA = 0.20, MESES_ANO = 12;
 
 const state = {
-  tipo: 1, modelo: 2, taxa: 0.08, idadeAlvo: 65,
-  pctUnico: 0.05, matchingUnico: 1.00, matchPlano: 1.00,
+  tipo: 1, modelo: 1, taxa: 0.08, idadeAlvo: 65,
+  pctUnico: 0.06, matchingUnico: 1.00, matchPlano: 1.00,
   pctEmpresaInst: 0.03, instFatorEtario: false,
   faixasSalariais: [[7000,0.06],[15000,0.06],[25000,0.06],[INF,0.06]],
   faixasIdade:     [[30,1.00],[40,1.25],[50,1.50],[60,1.75],[INF,2.00]],
