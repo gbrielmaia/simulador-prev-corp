@@ -28,7 +28,7 @@
   .brand .bn { font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; }
   .kicker { font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--gold); font-weight:600; }
   h1 { font-family:'Fraunces',serif; font-weight:300; font-size:42px; letter-spacing:-.02em; margin:6px 0 0; line-height:1; }
-  h1 em { font-style:italic; color:var(--gold); }
+  h1 em { font-style:italic; color:var(--ink); }
   .top .right { text-align:right; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; line-height:1.9; }
 
   .selftest { margin-top:14px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:8px 13px; display:inline-block; max-width:100%; overflow-wrap:anywhere; border:1px solid var(--rule-strong); background:var(--card); }
@@ -60,6 +60,15 @@
   .modelleg .mli { font-size:10px; line-height:1.5; color:var(--ink-soft); padding:2.5px 0; }
   .modelleg .mli b { display:inline-block; min-width:15px; color:var(--gold-deep); font-family:'IBM Plex Mono',monospace; font-weight:600; }
   .fixedval { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink); padding:5px 9px; background:var(--paper-2); border:1px solid var(--rule); }
+  .num-l { width:118px; }
+  table.cmptab { width:100%; border-collapse:collapse; font-size:11.5px; }
+  table.cmptab th { font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; padding:7px 8px; border-bottom:1px solid var(--rule-strong); text-align:right; }
+  table.cmptab th:first-child { text-align:left; }
+  table.cmptab td { padding:7px 8px; border-bottom:1px solid var(--rule); text-align:right; font-family:'IBM Plex Mono',monospace; color:var(--ink-soft); }
+  table.cmptab td:first-child { text-align:left; font-family:'Inter',sans-serif; color:var(--ink); }
+  table.cmptab tr.total td { border-top:1px solid var(--rule-strong); font-weight:600; color:var(--ink); }
+  table.cmptab td.gold { color:var(--gold-deep); font-weight:600; }
+  table.cmptab tr:last-child td { border-bottom:none; }
   .toggle { display:inline-flex; border:1px solid var(--rule-strong); }
   .toggle button { font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:5px 11px; background:#fff; border:none; cursor:pointer; color:var(--ink-soft); }
   .toggle button.on { background:var(--gold); color:#fff; }
@@ -93,7 +102,7 @@
   /* dashboard */
   .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule-strong); border:1px solid var(--rule-strong); }
   .kpi { background:var(--card); padding:14px 15px; }
-  .kpi.gold { background:var(--accent-bg); }
+  .kpi.gold { background:var(--card); box-shadow:inset 0 0 0 2px var(--gold); }
   .kpi .lab { font-size:8.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; }
   .kpi .val { font-family:'Fraunces',serif; font-weight:400; font-size:25px; letter-spacing:-.02em; margin-top:6px; line-height:1; }
   .kpi.gold .val { color:var(--gold); }
@@ -145,7 +154,7 @@
   <header class="top">
     <div>
       <div class="brand"><span class="sym"></span><span class="bn">Chess Capital · Documento Interno</span></div>
-      <div class="kicker" style="margin-top:14px;">Companheiro quantitativo · Previdência Corporativa</div>
+      <div class="kicker" style="margin-top:14px;">Previdência Corporativa</div>
       <h1>Simulador <em>interativo</em></h1>
     </div>
     <div class="right">
@@ -254,6 +263,14 @@
           <div class="hint">Define quanto do saldo aportado pela empresa o colaborador leva ao sair, por tempo de plano. Não afeta a economia tributária; governa a retenção.</div>
         </div>
       </div>
+
+      <div class="panel">
+        <h2 class="sec">Dados da empresa <span class="gold-tab">· opcional</span></h2>
+        <div class="field"><label>Faturamento anual</label><div class="ctl"><span class="suffix">R$</span><input type="number" class="num-l" id="faturamento" value="0" step="100000"></div></div>
+        <div class="field"><label>Folha salarial (total)</label><div class="ctl"><span class="suffix">R$</span><input type="number" class="num-l" id="folhaTotal" value="0" step="100000"></div></div>
+        <div class="field"><label>IRPJ + CSLL pago / ano</label><div class="ctl"><span class="suffix">R$</span><input type="number" class="num-l" id="irpjCsll" value="0" step="50000"></div></div>
+        <div class="hint">Preencha para ver o comparativo <em>sem vs com previdência</em> no dashboard. O teto de 20% segue sobre a folha dos <strong>participantes</strong> (somada do roster); a folha aqui é a <strong>total</strong> da empresa, exibida como contexto.</div>
+      </div>
     </div>
 
     <!-- ============ COLUNA DIREITA — ROSTER + DASHBOARD ============ -->
@@ -286,6 +303,7 @@
           <div class="kpi"><div class="lab">Custo líquido / ano</div><div class="val" id="kLiq">—</div><div class="sub" id="kLiqM"></div></div>
         </div>
         <div class="teto" id="tetoBox"></div>
+        <div id="compara" style="margin-top:16px; display:none;"></div>
 
         <div class="charts">
           <div class="chartbox">
@@ -319,6 +337,7 @@ const ALIQUOTA_DEDUCAO = 0.34, TETO_FOLHA = 0.20, MESES_ANO = 12;
 
 const state = {
   tipo: 1, modelo: 1, taxa: 0.08, idadeAlvo: 65,
+  faturamento: 0, folhaTotal: 0, irpjCsll: 0,
   pctUnico: 0.06, matchingUnico: 1.00, matchPlano: 1.00,
   pctEmpresaInst: 0.03, instFatorEtario: false,
   faixasSalariais: [[7000,0.06],[15000,0.06],[25000,0.06],[INF,0.06]],
@@ -493,10 +512,36 @@ function recompute(){
     teto.innerHTML = `<strong>Dentro do teto.</strong> Aporte ${fmtBRLk(c.empA)}/ano é integralmente dedutível (limite de 20% da folha = ${fmtBRLk(c.tetoA)}/ano). Economia = aporte × 34%.`;
   }
 
+  renderComparativo(c);
+
   const grupos = saldoPorGrupo();
   document.getElementById('curvaTit').textContent = `por pessoa, até os ${state.idadeAlvo} anos · rent. 8%/ano`;
   drawGroupBars(grupos);
   drawBars(c);
+}
+
+/* ===================== COMPARATIVO SEM/COM PREVIDÊNCIA ===================== */
+function renderComparativo(c){
+  const box = document.getElementById('compara');
+  const F = state.faturamento, Fo = state.folhaTotal, T = state.irpjCsll;
+  if (!(F>0 || Fo>0 || T>0)){ box.style.display='none'; box.innerHTML=''; return; }
+  const D = c.dedutivelA, econ = c.economia, comT = Math.max(0, T - econ);
+  const cell = v => v>0 ? fmtBRL0.format(v) : '—';
+  box.style.display = '';
+  box.innerHTML =
+    '<h2 class="sec" style="margin:0 0 10px;">Comparativo anual · sem vs com previdência</h2>'+
+    '<table class="cmptab"><thead><tr><th>Item</th><th>Sem previdência</th><th>Com previdência</th></tr></thead><tbody>'+
+    `<tr><td>Faturamento anual</td><td>${cell(F)}</td><td>${cell(F)}</td></tr>`+
+    `<tr><td>Folha salarial (total)</td><td>${cell(Fo)}</td><td>${cell(Fo)}</td></tr>`+
+    `<tr><td>Aporte previdência (dedutível)</td><td>—</td><td>${fmtBRL0.format(D)}</td></tr>`+
+    `<tr class="total"><td>IRPJ + CSLL no ano</td><td>${cell(T)}</td><td class="gold">${T>0?fmtBRL0.format(comT):'—'}</td></tr>`+
+    `<tr><td>Economia anual</td><td>—</td><td class="gold">${fmtBRL0.format(econ)}</td></tr>`+
+    '</tbody></table>'+
+    '<div class="hint">'+(state.tipo===2
+        ? 'Entidade incentivada: isenta de IRPJ/CSLL — economia zero.'
+        : ('Economia = parcela dedutível (limitada a 20% da folha dos participantes) × 34%'+
+           (T>0?` · ${fmtPct1(econ/T)} do IRPJ+CSLL pago`:'')+(F>0?` · ${fmtPct1(econ/F)} do faturamento`:'')+'.'))+
+      ' Faturamento e folha total são contexto — não alteram o cálculo da economia.</div>';
 }
 
 /* ===================== GRÁFICOS SVG ===================== */
@@ -565,6 +610,9 @@ function wireParams(){
   document.getElementById('matchingUnico').addEventListener('input', e => { state.matchingUnico = (parseFloat(e.target.value)||0)/100; recompute(); });
   document.getElementById('matchPlano').addEventListener('input', e => { state.matchPlano = (parseFloat(e.target.value)||0)/100; recompute(); });
   document.getElementById('pctEmpresaInst').addEventListener('input', e => { state.pctEmpresaInst = (parseFloat(e.target.value)||0)/100; recompute(); });
+  ['faturamento','folhaTotal','irpjCsll'].forEach(id => {
+    document.getElementById(id).addEventListener('input', e => { state[id] = parseFloat(e.target.value)||0; recompute(); });
+  });
 
   document.getElementById('tipoToggle').addEventListener('click', e => {
     const b = e.target.closest('button[data-tipo]'); if(!b) return;
