@@ -267,8 +267,8 @@
           <div class="ft">Vesting · liberação da parte da empresa (meses)</div>
           <table class="ftab" id="ftVesting"></table>
           <div class="hint">Define quanto do saldo aportado pela empresa o colaborador leva ao sair, por tempo de plano. Não afeta a economia tributária; governa a retenção.</div>
-          <div class="field" style="margin-top:8px;"><label>Rotatividade — % que saem</label><div class="ctl"><input type="number" id="turnover" value="20" step="5"><span class="suffix">%</span></div></div>
-          <div class="field"><label>Anos até a saída (do 1º aporte)</label><div class="ctl"><input type="number" id="anosSaida" value="5" step="1"><span class="suffix">anos</span></div></div>
+          <div class="field" style="margin-top:8px;"><label>% da base que sai por ciclo</label><div class="ctl"><input type="number" id="turnover" value="20" step="5"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Ciclo de renovação</label><div class="ctl"><input type="number" id="anosSaida" value="5" step="1"><span class="suffix">anos</span></div></div>
           <div class="vrec" id="vestRec"></div>
         </div>
       </div>
@@ -531,7 +531,7 @@ function recompute(){
   drawBars(c);
 }
 
-/* ===================== RECUPERAÇÃO DE VESTING ===================== */
+/* ===================== ABATIMENTO DE CONTRIBUIÇÃO FUTURA (vesting) ===================== */
 function renderVesting(){
   const box = document.getElementById('vestRec');
   const anos = state.anosSaida, meses = anos * 12;
@@ -540,18 +540,18 @@ function renderVesting(){
   for (const r of state.roster){
     const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
     const aporteEmpAnual = ap.empresa * MESES_ANO;
-    // saldo financiado pela empresa para cada pessoa, após 'anos' anos (capitalização 8% a.a.)
+    // saldo financiado pela empresa para cada pessoa, ao fim de um ciclo (capitalização 8% a.a.)
     let saldoEmp = 0;
     for (let t=0; t<anos; t++) saldoEmp = saldoEmp * (1 + state.taxa) + aporteEmpAnual;
     const saem = state.turnover * r.qtde;
-    total += saem * naoVestido * saldoEmp;   // só a parcela NÃO vestida volta para a empresa
+    total += saem * naoVestido * saldoEmp;   // só a parcela NÃO vestida abate contribuições futuras
     leavers += saem;
   }
-  const anual = anos > 0 ? total / anos : 0;
+  const anualEq = anos > 0 ? total / anos : 0;
   box.innerHTML =
-    '<div class="vk">Recuperação de vesting · empresa</div>'+
-    `<div class="big">${fmtBRLk(anual)}/ano <span class="med">(média em ${anos} ${anos===1?'ano':'anos'})</span></div>`+
-    `<div class="vd">${fmtPct0(state.turnover)} dos colaboradores saem em ${anos} ${anos===1?'ano':'anos'} → vesting de ${fmtPct0(vest)}; a empresa recupera <b>${fmtPct0(naoVestido)}</b> do saldo patronal de cada um que sai. Total recuperado no evento: <b>${fmtBRL0.format(total)}</b> · ${Math.round(leavers)} ${Math.round(leavers)===1?'pessoa':'pessoas'}.</div>`;
+    '<div class="vk">Abatimento de contribuição futura · empresa</div>'+
+    `<div class="big">${fmtBRLk(total)} <span class="med">por ciclo (a cada ${anos} ${anos===1?'ano':'anos'})</span></div>`+
+    `<div class="vd">A cada ${anos} ${anos===1?'ano':'anos'}, <b>${fmtPct0(state.turnover)}</b> da base sai com vesting de ${fmtPct0(vest)}; a parcela não-vestida (<b>${fmtPct0(naoVestido)}</b>) do saldo patronal de cada um <b>abate as contribuições futuras</b> da empresa. ${Math.round(leavers)} ${Math.round(leavers)===1?'pessoa':'pessoas'} por ciclo · ≈ ${fmtBRLk(anualEq)}/ano.</div>`;
 }
 
 /* ===================== COMPARATIVO SEM/COM PREVIDÊNCIA ===================== */
