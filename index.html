@@ -59,6 +59,7 @@
   .modelleg { margin:10px 0 2px; padding:10px 0 2px; border-top:1px dotted var(--rule); }
   .modelleg .mli { font-size:10px; line-height:1.5; color:var(--ink-soft); padding:2.5px 0; }
   .modelleg .mli b { display:inline-block; min-width:15px; color:var(--gold-deep); font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .fixedval { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink); padding:5px 9px; background:var(--paper-2); border:1px solid var(--rule); }
   .toggle { display:inline-flex; border:1px solid var(--rule-strong); }
   .toggle button { font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:5px 11px; background:#fff; border:none; cursor:pointer; color:var(--ink-soft); }
   .toggle button.on { background:var(--gold); color:#fff; }
@@ -192,7 +193,7 @@
 
         <div class="field">
           <label>Rentabilidade anual líquida</label>
-          <div class="ctl"><input type="number" id="taxa" value="8" step="0.5"><span class="suffix">%</span></div>
+          <div class="ctl"><span class="fixedval">8%</span><span class="suffix">fixa</span></div>
         </div>
 
         <div class="field">
@@ -288,9 +289,9 @@
 
         <div class="charts">
           <div class="chartbox">
-            <div class="ct">Curva consolidada do fundo</div>
-            <div class="cv" id="curvaTit">saldo projetado na idade-alvo</div>
-            <svg id="lineChart" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="ct">Saldo individual na aposentadoria · por grupo</div>
+            <div class="cv" id="curvaTit">o que cada pessoa acumula</div>
+            <svg id="groupChart" viewBox="0 0 520 260" preserveAspectRatio="xMidYMid meet"></svg>
           </div>
           <div class="chartbox">
             <div class="ct">Exercício anual (R$)</div>
@@ -394,16 +395,16 @@ function consolidar(){
     tetoA: TETO_FOLHA * folhaA, dedutivelA: Math.min(empA, TETO_FOLHA*folhaA),
   };
 }
-function curvaConsolidada(){
-  const H = Math.max(0, ...state.roster.map(r => state.idadeAlvo - r.idade), 0);
-  const acc = new Array(H).fill(0);
-  for (const r of state.roster){
+function saldoPorGrupo(){
+  // saldo de conta POR PESSOA de cada grupo ao chegar na idade-alvo (visão do beneficiário)
+  return state.roster.map(r => {
     const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
     const aporteAnual = ap.total * MESES_ANO;
-    const serie = projetarSaldoHorizonte(r.idade, state.idadeAlvo, aporteAnual, state.taxa, H);
-    for (let t=0; t<H; t++) acc[t] += r.qtde * serie[t];
-  }
-  return acc; // [ano1..anoH]
+    const anos = Math.max(0, state.idadeAlvo - r.idade);
+    let saldo = 0.0;
+    for (let t=0; t<anos; t++) saldo = saldo * (1 + state.taxa) + aporteAnual;
+    return { nome: r.nome, saldo, anos, aporteMes: ap.total };
+  });
 }
 
 /* ===================== FORMATAÇÃO ===================== */
@@ -492,42 +493,33 @@ function recompute(){
     teto.innerHTML = `<strong>Dentro do teto.</strong> Aporte ${fmtBRLk(c.empA)}/ano é integralmente dedutível (limite de 20% da folha = ${fmtBRLk(c.tetoA)}/ano). Economia = aporte × 34%.`;
   }
 
-  const curva = curvaConsolidada();
-  document.getElementById('curvaTit').textContent = curva.length
-    ? `${fmtBRLk(curva[curva.length-1])} na idade-alvo (${state.idadeAlvo} anos)` : 'sem horizonte';
-  drawLine(curva);
+  const grupos = saldoPorGrupo();
+  document.getElementById('curvaTit').textContent = `por pessoa, até os ${state.idadeAlvo} anos · rent. 8%/ano`;
+  drawGroupBars(grupos);
   drawBars(c);
 }
 
 /* ===================== GRÁFICOS SVG ===================== */
 const NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
-function drawLine(data){
-  const svg = document.getElementById('lineChart'); svg.innerHTML='';
-  const W=520,H=240,ml=58,mr=14,mt=14,mb=26;
-  const iw=W-ml-mr, ih=H-mt-mb;
-  const n=data.length, max=Math.max(1,...data);
-  // gridlines + y labels
-  for(let g=0; g<=4; g++){
-    const y=mt+ih*g/4, val=max*(1-g/4);
-    svg.appendChild(el('line',{x1:ml,y1:y,x2:W-mr,y2:y,stroke:'rgba(16,36,63,.10)','stroke-width':1}));
-    const tx=el('text',{x:ml-7,y:y+3,'text-anchor':'end','font-size':9,'font-family':'IBM Plex Mono, monospace',fill:'#8C95A3'});
-    tx.textContent=fmtBRLk(val); svg.appendChild(tx);
-  }
-  if(n===0){ const t=el('text',{x:W/2,y:H/2,'text-anchor':'middle','font-size':12,fill:'#8C95A3'}); t.textContent='sem dados'; svg.appendChild(t); return; }
-  const xs=i=> n===1? ml+iw/2 : ml + iw*i/(n-1);
-  const ys=v=> mt + ih*(1 - v/max);
-  // área
-  let d=`M ${xs(0)} ${ys(data[0])}`;
-  for(let i=1;i<n;i++) d+=` L ${xs(i)} ${ys(data[i])}`;
-  const area=d+` L ${xs(n-1)} ${mt+ih} L ${xs(0)} ${mt+ih} Z`;
-  svg.appendChild(el('path',{d:area,fill:'rgba(168,128,58,.12)'}));
-  svg.appendChild(el('path',{d:d,fill:'none',stroke:'#A8803A','stroke-width':2}));
-  // ponto final
-  svg.appendChild(el('circle',{cx:xs(n-1),cy:ys(data[n-1]),r:3.5,fill:'#A8803A'}));
-  // x labels (ano 1, meio, fim)
-  const marks = n<=1?[0]:[0,Math.floor((n-1)/2),n-1];
-  marks.forEach(i=>{ const t=el('text',{x:xs(i),y:H-8,'text-anchor':'middle','font-size':9,'font-family':'IBM Plex Mono, monospace',fill:'#8C95A3'}); t.textContent='Ano '+(i+1); svg.appendChild(t); });
+function drawGroupBars(grupos){
+  const svg = document.getElementById('groupChart'); svg.innerHTML='';
+  const W=520,H=260,ml=8,mr=10,mt=10,mb=10;
+  const n=grupos.length;
+  if(n===0){ const t=el('text',{x:W/2,y:H/2,'text-anchor':'middle','font-size':12,fill:'#8C95A3'}); t.textContent='sem grupos'; svg.appendChild(t); return; }
+  const max=Math.max(1, ...grupos.map(g=>g.saldo));
+  const rowH=(H-mt-mb)/n, barH=Math.min(24, rowH*0.46);
+  const labelW=120, valW=84, barX=ml+labelW, barMax=W-mr-valW-barX;
+  grupos.forEach((g,i)=>{
+    const cy=mt+rowH*i+rowH/2;
+    const nome=g.nome.length>17 ? g.nome.slice(0,16)+'…' : g.nome;
+    const lt=el('text',{x:ml,y:cy-3,'font-size':11.5,'font-family':'Inter, sans-serif',fill:'#10243F','font-weight':600}); lt.textContent=nome; svg.appendChild(lt);
+    const sub=el('text',{x:ml,y:cy+11,'font-size':8.5,'font-family':'IBM Plex Mono, monospace',fill:'#8C95A3'});
+    sub.textContent = g.anos>0 ? (g.anos+' anos · '+fmtBRLk(g.aporteMes)+'/mês') : 'já na idade-alvo'; svg.appendChild(sub);
+    svg.appendChild(el('rect',{x:barX,y:cy-barH/2,width:barMax,height:barH,fill:'rgba(16,36,63,.06)'}));
+    svg.appendChild(el('rect',{x:barX,y:cy-barH/2,width:Math.max(0,barMax*g.saldo/max),height:barH,fill:'#A8803A'}));
+    const vt=el('text',{x:W-mr,y:cy+4,'text-anchor':'end','font-size':12.5,'font-family':'Fraunces, serif',fill:'#8B6525'}); vt.textContent=fmtBRLk(g.saldo); svg.appendChild(vt);
+  });
 }
 function drawBars(c){
   const svg=document.getElementById('barChart'); svg.innerHTML='';
@@ -567,7 +559,7 @@ function wireParams(){
   document.getElementById('modelo').addEventListener('change', e => {
     state.modelo = parseInt(e.target.value,10); applyModelVisibility(); recompute();
   });
-  document.getElementById('taxa').addEventListener('input', e => { state.taxa = (parseFloat(e.target.value)||0)/100; recompute(); });
+  // rentabilidade fixa em 8% — campo não editável (sem listener)
   document.getElementById('idadeAlvo').addEventListener('input', e => { state.idadeAlvo = parseInt(e.target.value,10)||0; recompute(); });
   document.getElementById('pctUnico').addEventListener('input', e => { state.pctUnico = (parseFloat(e.target.value)||0)/100; recompute(); });
   document.getElementById('matchingUnico').addEventListener('input', e => { state.matchingUnico = (parseFloat(e.target.value)||0)/100; recompute(); });
