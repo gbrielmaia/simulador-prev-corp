@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador · Previdência Corporativa — Chess Capital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:#F5F0E6; --paper-2:#EFE9DC; --ink:#10243F; --ink-2:#1A3355;
+    --ink-soft:#4A5B74; --ink-mute:#8C95A3; --rule:rgba(16,36,63,.14);
+    --rule-strong:rgba(16,36,63,.28); --gold:#A8803A; --gold-deep:#8B6525;
+    --gold-soft:#C9A765; --accent-bg:rgba(168,128,58,.08); --card:#FAF6EC;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:var(--paper); color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif; font-feature-settings:"ss01","cv11","tnum","lnum"; }
+  a { color:var(--gold-deep); }
+
+  .wrap { max-width:1180px; margin:0 auto; padding:34px 30px 60px; }
+
+  /* header */
+  header.top { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid var(--rule-strong); padding-bottom:18px; }
+  .brand { display:flex; align-items:center; gap:11px; }
+  .brand .sym { width:26px; height:26px; background:url('data:image/png;base64,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') center/contain no-repeat; }
+  .brand .bn { font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; }
+  .kicker { font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--gold); font-weight:600; }
+  h1 { font-family:'Fraunces',serif; font-weight:300; font-size:42px; letter-spacing:-.02em; margin:6px 0 0; line-height:1; }
+  h1 em { font-style:italic; color:var(--gold); }
+  .top .right { text-align:right; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; line-height:1.9; }
+
+  .selftest { margin-top:14px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:8px 13px; display:inline-block; max-width:100%; overflow-wrap:anywhere; border:1px solid var(--rule-strong); background:var(--card); }
+  .selftest.ok { border-color:var(--gold); color:var(--gold-deep); }
+  .selftest .x { color:#a33; }
+
+  /* layout */
+  .grid { display:grid; grid-template-columns:330px 1fr; gap:26px; margin-top:26px; align-items:start; }
+  .grid > * { min-width:0; }
+  @media (max-width:920px){ .grid { grid-template-columns:1fr; } }
+
+  .panel { border:1px solid var(--rule-strong); background:var(--card); padding:18px 18px 16px; }
+  .panel + .panel { margin-top:18px; }
+  h2.sec { font-family:'Inter',sans-serif; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-mute); margin:0 0 14px; font-weight:600; border-bottom:1px solid var(--rule); padding-bottom:8px; }
+  .gold-tab { color:var(--gold-deep); }
+
+  /* form fields */
+  .field { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:7px 0; border-bottom:1px dotted var(--rule); }
+  .field:last-child { border-bottom:none; }
+  .field label { font-size:11.5px; color:var(--ink-soft); }
+  .field .ctl { display:flex; align-items:center; gap:5px; }
+  input, select { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink); background:#fff; border:1px solid var(--rule-strong); padding:5px 7px; border-radius:0; }
+  input:focus, select:focus { outline:2px solid var(--gold-soft); outline-offset:-1px; }
+  input[type=number] { width:76px; text-align:right; }
+  input.num-s { width:62px; }
+  select { background:#fff; }
+  .suffix { font-size:11px; color:var(--ink-mute); font-family:'IBM Plex Mono',monospace; }
+  .toggle { display:inline-flex; border:1px solid var(--rule-strong); }
+  .toggle button { font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:5px 11px; background:#fff; border:none; cursor:pointer; color:var(--ink-soft); }
+  .toggle button.on { background:var(--gold); color:#fff; }
+
+  /* faixa tables */
+  .faixa { margin-top:12px; }
+  .faixa .ft { font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold-deep); font-weight:600; margin-bottom:6px; }
+  table.ftab { width:100%; border-collapse:collapse; }
+  table.ftab td { padding:3px 0; font-size:11px; }
+  table.ftab td:last-child { text-align:right; }
+  table.ftab input { width:64px; }
+  .hint { font-size:10px; color:var(--ink-mute); line-height:1.45; margin-top:6px; }
+  .hidden { display:none !important; }
+
+  /* roster */
+  table.roster { width:100%; border-collapse:collapse; font-size:11.5px; }
+  table.roster th { font-size:8.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; text-align:right; padding:7px 6px; border-bottom:1px solid var(--rule-strong); }
+  table.roster th.l { text-align:left; }
+  table.roster td { padding:4px 6px; border-bottom:1px solid var(--rule); text-align:right; }
+  table.roster td.l { text-align:left; }
+  table.roster td.calc { font-family:'IBM Plex Mono',monospace; color:var(--ink-soft); }
+  table.roster td.calc.gold { color:var(--gold-deep); }
+  table.roster input { width:100%; }
+  table.roster input.nome { text-align:left; font-family:'Inter',sans-serif; }
+  table.roster input[type=number] { width:100%; }
+  .rm { cursor:pointer; color:var(--ink-mute); border:none; background:none; font-size:15px; line-height:1; padding:0 2px; }
+  .rm:hover { color:#a33; }
+  .addrow { margin-top:10px; font-family:'Inter',sans-serif; font-size:11px; font-weight:600; color:var(--gold-deep); background:var(--accent-bg); border:1px dashed var(--gold); padding:7px 13px; cursor:pointer; }
+  .addrow:hover { background:rgba(168,128,58,.16); }
+
+  /* dashboard */
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule-strong); border:1px solid var(--rule-strong); }
+  .kpi { background:var(--card); padding:14px 15px; }
+  .kpi.gold { background:var(--accent-bg); }
+  .kpi .lab { font-size:8.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; }
+  .kpi .val { font-family:'Fraunces',serif; font-weight:400; font-size:25px; letter-spacing:-.02em; margin-top:6px; line-height:1; }
+  .kpi.gold .val { color:var(--gold); }
+  .kpi .sub { font-size:10px; color:var(--ink-soft); margin-top:5px; font-family:'IBM Plex Mono',monospace; }
+
+  .teto { margin-top:14px; padding:11px 14px; border-left:3px solid var(--gold); background:var(--accent-bg); font-size:11.5px; line-height:1.5; }
+  .teto.over { border-left-color:#a33; background:rgba(170,51,51,.07); }
+  .teto strong { font-weight:600; }
+
+  .charts { display:grid; grid-template-columns:1.55fr 1fr; gap:18px; margin-top:18px; }
+  @media (max-width:760px){ .charts { grid-template-columns:1fr; } }
+  .chartbox { border:1px solid var(--rule-strong); background:var(--card); padding:14px 15px; }
+  .chartbox .ct { font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; margin-bottom:4px; }
+  .chartbox .cv { font-family:'Fraunces',serif; font-size:15px; color:var(--ink); margin-bottom:8px; }
+  svg { display:block; width:100%; height:auto; }
+
+  .disc { margin-top:30px; border-top:1px solid var(--rule); padding-top:14px; font-size:10px; color:var(--ink-mute); line-height:1.6; }
+  .disc strong { color:var(--ink-soft); }
+
+  /* roster scroll em telas estreitas */
+  .rosterwrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table.roster { min-width:680px; }
+  .scrollhint { display:none; font-size:10px; color:var(--gold-deep); margin:0 0 8px; font-family:'IBM Plex Mono',monospace; }
+
+  /* ====== MOBILE ====== */
+  @media (max-width:600px){
+    .wrap { padding:20px 13px 44px; }
+    header.top { flex-direction:column; align-items:stretch; gap:6px; }
+    header.top > div { width:100%; }
+    .kicker { line-height:1.5; }
+    .top .right { text-align:left; line-height:1.7; margin-top:4px; }
+    h1 { font-size:33px; }
+    .selftest { font-size:10px; padding:8px 11px; }
+    .panel { padding:14px 13px; }
+    .kpis { grid-template-columns:1fr 1fr; }
+    .kpi .val { font-size:22px; }
+    .charts { grid-template-columns:1fr; }
+    .scrollhint { display:block; }
+    input[type=number] { width:68px; }
+    .field { flex-wrap:wrap; align-items:flex-start; gap:5px 10px; }
+    .field .ctl { margin-left:auto; }
+    #modelo, select { max-width:100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="brand"><span class="sym"></span><span class="bn">Chess Capital · Documento Interno</span></div>
+      <div class="kicker" style="margin-top:14px;">Companheiro quantitativo · Previdência Corporativa</div>
+      <h1>Simulador <em>interativo</em></h1>
+    </div>
+    <div class="right">
+      Edite e recalcula ao vivo<br>
+      PGBL · instituidor PJ<br>
+      Valores ilustrativos
+    </div>
+  </header>
+
+  <div id="selftest" class="selftest">verificando motor…</div>
+
+  <div class="grid">
+
+    <!-- ============ COLUNA ESQUERDA — PARÂMETROS ============ -->
+    <div>
+      <div class="panel">
+        <h2 class="sec">Parâmetros do plano</h2>
+
+        <div class="field">
+          <label>Tipo de entidade</label>
+          <div class="ctl toggle" id="tipoToggle">
+            <button data-tipo="1" class="on">Corporação</button>
+            <button data-tipo="2">Incentivada</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Modelo de custeio</label>
+          <div class="ctl">
+            <select id="modelo">
+              <option value="1">1 · Contrapartida básica</option>
+              <option value="2" selected>2 · Faixa salarial</option>
+              <option value="3">3 · Matching por idade</option>
+              <option value="4">4 · Matching por tempo</option>
+              <option value="5">5 · Instituído</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Rentabilidade anual líquida</label>
+          <div class="ctl"><input type="number" id="taxa" value="8" step="0.5"><span class="suffix">%</span></div>
+        </div>
+
+        <div class="field">
+          <label>Idade-alvo de aposentadoria</label>
+          <div class="ctl"><input type="number" id="idadeAlvo" value="65" step="1"><span class="suffix">anos</span></div>
+        </div>
+
+        <!-- modelo 1 -->
+        <div class="field m-only m1">
+          <label>Aporte único do colaborador</label>
+          <div class="ctl"><input type="number" id="pctUnico" value="5" step="1"><span class="suffix">%</span></div>
+        </div>
+        <div class="field m-only m1">
+          <label>Matching único da empresa</label>
+          <div class="ctl"><input type="number" id="matchingUnico" value="100" step="25"><span class="suffix">%</span></div>
+        </div>
+
+        <!-- modelo 5 -->
+        <div class="field m-only m5">
+          <label>Aporte instituído (% do salário)</label>
+          <div class="ctl"><input type="number" id="pctEmpresaInst" value="3" step="0.5"><span class="suffix">%</span></div>
+        </div>
+        <div class="field m-only m5">
+          <label>Aplicar fator etário</label>
+          <div class="ctl toggle" id="instFatorToggle">
+            <button data-v="0" class="on">Não</button>
+            <button data-v="1">Sim</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="sec">Faixas editáveis</h2>
+
+        <div class="faixa m-only m2 m3 m4" id="boxSalarial">
+          <div class="ft">Aporte do colaborador · por faixa salarial</div>
+          <table class="ftab" id="ftSalarial"></table>
+        </div>
+
+        <div class="faixa m-only m2" id="boxMatchPlano">
+          <div class="ft">Matching da empresa</div>
+          <table class="ftab"><tr><td>Sobre o aporte do colaborador</td><td><input type="number" id="matchPlano" value="100" step="25"> %</td></tr></table>
+        </div>
+
+        <div class="faixa m-only m3 m5fator" id="boxIdade">
+          <div class="ft">Matching · por faixa etária</div>
+          <table class="ftab" id="ftIdade"></table>
+        </div>
+
+        <div class="faixa m-only m4" id="boxTempo">
+          <div class="ft">Matching · por tempo de casa (anos)</div>
+          <table class="ftab" id="ftTempo"></table>
+        </div>
+
+        <div class="faixa">
+          <div class="ft">Vesting · liberação da parte da empresa (meses)</div>
+          <table class="ftab" id="ftVesting"></table>
+          <div class="hint">Define quanto do saldo aportado pela empresa o colaborador leva ao sair, por tempo de plano. Não afeta a economia tributária; governa a retenção.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ COLUNA DIREITA — ROSTER + DASHBOARD ============ -->
+    <div>
+      <div class="panel">
+        <h2 class="sec">Roster de colaboradores <span class="gold-tab">· editável</span></h2>
+        <div class="scrollhint">← deslize a tabela →</div>
+        <div class="rosterwrap">
+        <table class="roster">
+          <thead>
+            <tr>
+              <th class="l">ID / Grupo</th><th>Qtde</th><th>Salário (R$)</th><th>Idade</th><th>Tempo</th>
+              <th>% col.</th><th>Aporte col.</th><th>% match</th><th>Aporte emp.</th><th>Total/mês</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="rosterBody"></tbody>
+        </table>
+        </div>
+        <button class="addrow" id="addRow">+ adicionar linha</button>
+      </div>
+
+      <div class="panel">
+        <h2 class="sec">Dashboard consolidado</h2>
+        <div class="kpis">
+          <div class="kpi"><div class="lab">Participantes</div><div class="val" id="kN">—</div></div>
+          <div class="kpi"><div class="lab">Aporte empresa / mês</div><div class="val" id="kEmpM">—</div></div>
+          <div class="kpi"><div class="lab">Aporte empresa / ano</div><div class="val" id="kEmpA">—</div></div>
+          <div class="kpi"><div class="lab">Aporte sobre a folha</div><div class="val" id="kPct">—</div></div>
+          <div class="kpi gold"><div class="lab">Economia IRPJ+CSLL / ano</div><div class="val" id="kEcon">—</div></div>
+          <div class="kpi"><div class="lab">Custo líquido / ano</div><div class="val" id="kLiq">—</div><div class="sub" id="kLiqM"></div></div>
+        </div>
+        <div class="teto" id="tetoBox"></div>
+
+        <div class="charts">
+          <div class="chartbox">
+            <div class="ct">Curva consolidada do fundo</div>
+            <div class="cv" id="curvaTit">saldo projetado na idade-alvo</div>
+            <svg id="lineChart" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <div class="chartbox">
+            <div class="ct">Exercício anual (R$)</div>
+            <div class="cv">aporte e economia</div>
+            <svg id="barChart" viewBox="0 0 300 240" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="disc">
+    <strong>Aviso.</strong> Material interno de referência — não constitui oferta de previdência nem recomendação tributária.
+    Planos PGBL/VGBL operados por seguradora habilitada pela SUSEP. A dedução de 34% (IRPJ 25% + CSLL 9%) pressupõe apuração
+    pelo <strong>Lucro Real</strong> e está limitada a 20% da folha dos participantes; entidades incentivadas (isentas) não têm dedução.
+    Capitalização anual, aporte no fim do ano, salário constante em termos reais. Valores ilustrativos.
+    Motor de cálculo idêntico ao <strong>engine.py</strong> do workbook <strong>Simulador_Prev_Corp_Chess.xlsm</strong>.
+  </div>
+</div>
+
+<script>
+/* ===================== MOTOR (porta 1:1 de engine.py) ===================== */
+const INF = Infinity;
+const ALIQUOTA_DEDUCAO = 0.34, TETO_FOLHA = 0.20, MESES_ANO = 12;
+
+const state = {
+  tipo: 1, modelo: 2, taxa: 0.08, idadeAlvo: 65,
+  pctUnico: 0.05, matchingUnico: 1.00, matchPlano: 1.00,
+  pctEmpresaInst: 0.03, instFatorEtario: false,
+  faixasSalariais: [[7000,0.01],[15000,0.04],[25000,0.06],[INF,0.08]],
+  faixasIdade:     [[30,1.00],[40,1.25],[50,1.50],[60,1.75],[INF,2.00]],
+  faixasTempo:     [[5,1.00],[10,1.25],[15,1.50],[20,1.75],[INF,2.00]],
+  vesting:         [[12,0.0],[24,0.20],[36,0.40],[48,0.60],[60,0.80],[INF,1.00]],
+  roster: [
+    {nome:"Operacional", qtde:30, salario:4000,  idade:32, tempo:3},
+    {nome:"Pleno",       qtde:15, salario:9000,  idade:38, tempo:5},
+    {nome:"Sênior",      qtde:8,  salario:18000, idade:45, tempo:8},
+    {nome:"Liderança",   qtde:4,  salario:30000, idade:50, tempo:12},
+  ],
+};
+
+function lookup(valor, faixas){
+  for (const [lim, res] of faixas){ if (valor <= lim) return res; }
+  return faixas[faixas.length-1][1];
+}
+function aporteColaboradorPct(salario, modelo){
+  if (modelo === 5) return 0.0;
+  if (modelo === 1) return state.pctUnico;
+  return lookup(salario, state.faixasSalariais);
+}
+function matchingPct(modelo, idade, tempo){
+  if (modelo === 1) return state.matchingUnico;
+  if (modelo === 2) return state.matchPlano;
+  if (modelo === 3) return lookup(idade, state.faixasIdade);
+  if (modelo === 4) return lookup(tempo, state.faixasTempo);
+  return 1.0;
+}
+function aportesMensais(salario, idade, tempo, modelo){
+  const pct = aporteColaboradorPct(salario, modelo);
+  const colaborador = salario * pct;
+  let empresa;
+  if (modelo === 5){
+    const fator = state.instFatorEtario ? lookup(idade, state.faixasIdade) : 1.0;
+    empresa = salario * state.pctEmpresaInst * fator;
+  } else {
+    empresa = colaborador * matchingPct(modelo, idade, tempo);
+  }
+  return { colaborador, empresa, total: colaborador + empresa };
+}
+function projetarSaldoHorizonte(idade, idadeAlvo, aporteAnual, taxa, H){
+  // acumula enquanto idade+t <= idade_alvo; depois segura o saldo (espelha a Projeção do Excel)
+  const anos = Math.max(0, idadeAlvo - idade);
+  const out = []; let saldo = 0.0;
+  for (let t = 1; t <= H; t++){
+    if (t <= anos) saldo = saldo * (1 + taxa) + aporteAnual;
+    out.push(saldo);
+  }
+  return out;
+}
+function vestingPct(meses){ return lookup(meses, state.vesting); }
+function deducaoFiscal(aporteEmpresaAnual, folhaAnual){
+  const dedutivel = Math.min(aporteEmpresaAnual, TETO_FOLHA * folhaAnual);
+  return dedutivel * ALIQUOTA_DEDUCAO;
+}
+function consolidar(){
+  let empM=0, colM=0, folhaM=0, n=0;
+  for (const r of state.roster){
+    const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
+    empM += r.qtde * ap.empresa;
+    colM += r.qtde * ap.colaborador;
+    folhaM += r.qtde * r.salario;
+    n += r.qtde;
+  }
+  const folhaA = folhaM * MESES_ANO;
+  const empA = empM * MESES_ANO;
+  const economia = state.tipo === 2 ? 0.0 : deducaoFiscal(empA, folhaA);
+  return {
+    n, empM, colM, empA, colA: colM*MESES_ANO, folhaA,
+    pctFolha: folhaA ? empA/folhaA : 0,
+    economia, liquidoA: empA - economia,
+    tetoA: TETO_FOLHA * folhaA, dedutivelA: Math.min(empA, TETO_FOLHA*folhaA),
+  };
+}
+function curvaConsolidada(){
+  const H = Math.max(0, ...state.roster.map(r => state.idadeAlvo - r.idade), 0);
+  const acc = new Array(H).fill(0);
+  for (const r of state.roster){
+    const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
+    const aporteAnual = ap.total * MESES_ANO;
+    const serie = projetarSaldoHorizonte(r.idade, state.idadeAlvo, aporteAnual, state.taxa, H);
+    for (let t=0; t<H; t++) acc[t] += r.qtde * serie[t];
+  }
+  return acc; // [ano1..anoH]
+}
+
+/* ===================== FORMATAÇÃO ===================== */
+const fmtBRL0 = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const fmtBRLk = v => v>=1e6 ? 'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi'
+                  : v>=1e3 ? 'R$ '+(v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0})+' mil'
+                  : fmtBRL0.format(v);
+const fmtPct1 = v => (v*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+const fmtPct0 = v => Math.round(v*100)+'%';
+
+/* ===================== RENDER FAIXAS ===================== */
+function faixaRows(tableId, faixas, isPct, key){
+  const t = document.getElementById(tableId);
+  t.innerHTML = '';
+  faixas.forEach((f,i) => {
+    const last = i === faixas.length-1;
+    const limCell = last ? '<span class="suffix">acima</span>'
+      : `<input type="number" data-key="${key}" data-i="${i}" data-f="lim" value="${f[0]}">`;
+    const valShown = isPct ? Math.round(f[1]*100) : f[1];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${limCell}</td><td><input type="number" class="num-s" data-key="${key}" data-i="${i}" data-f="val" value="${valShown}"> ${isPct?'%':''}</td>`;
+    t.appendChild(tr);
+  });
+}
+function renderFaixas(){
+  faixaRows('ftSalarial', state.faixasSalariais, true, 'faixasSalariais');
+  faixaRows('ftIdade', state.faixasIdade, true, 'faixasIdade');
+  faixaRows('ftTempo', state.faixasTempo, true, 'faixasTempo');
+  faixaRows('ftVesting', state.vesting, true, 'vesting');
+}
+
+/* ===================== RENDER ROSTER ===================== */
+function buildRoster(){
+  const tb = document.getElementById('rosterBody');
+  tb.innerHTML = '';
+  state.roster.forEach((r,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td class="l"><input class="nome" data-i="${i}" data-f="nome" value="${r.nome}"></td>`+
+      `<td><input type="number" data-i="${i}" data-f="qtde" value="${r.qtde}"></td>`+
+      `<td><input type="number" data-i="${i}" data-f="salario" step="500" value="${r.salario}"></td>`+
+      `<td><input type="number" data-i="${i}" data-f="idade" value="${r.idade}"></td>`+
+      `<td><input type="number" data-i="${i}" data-f="tempo" value="${r.tempo}"></td>`+
+      `<td class="calc" data-c="pct${i}"></td>`+
+      `<td class="calc" data-c="apc${i}"></td>`+
+      `<td class="calc" data-c="mtc${i}"></td>`+
+      `<td class="calc gold" data-c="ape${i}"></td>`+
+      `<td class="calc" data-c="tot${i}"></td>`+
+      `<td><button class="rm" data-rm="${i}" title="remover">×</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ===================== RECOMPUTE + DESENHO ===================== */
+function recompute(){
+  // colunas calculadas do roster
+  state.roster.forEach((r,i) => {
+    const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
+    const pct = aporteColaboradorPct(r.salario, state.modelo);
+    const mtc = state.modelo === 5 ? null : matchingPct(state.modelo, r.idade, r.tempo);
+    const set = (c,v) => { const el = document.querySelector(`[data-c="${c}${i}"]`); if (el) el.textContent = v; };
+    set('pct', state.modelo===5 ? '—' : fmtPct0(pct));
+    set('apc', fmtBRL0.format(ap.colaborador));
+    set('mtc', mtc===null ? '—' : fmtPct0(mtc));
+    set('ape', fmtBRL0.format(ap.empresa));
+    set('tot', fmtBRL0.format(ap.total));
+  });
+
+  const c = consolidar();
+  document.getElementById('kN').textContent = c.n;
+  document.getElementById('kEmpM').textContent = fmtBRL0.format(c.empM);
+  document.getElementById('kEmpA').textContent = fmtBRLk(c.empA);
+  document.getElementById('kPct').textContent = fmtPct1(c.pctFolha);
+  document.getElementById('kEcon').textContent = state.tipo===2 ? '—' : fmtBRLk(c.economia);
+  document.getElementById('kLiq').textContent = fmtBRLk(c.liquidoA);
+  document.getElementById('kLiqM').textContent = fmtBRL0.format(c.liquidoA/12) + ' / mês';
+
+  const teto = document.getElementById('tetoBox');
+  const over = c.empA > c.tetoA + 0.5;
+  teto.classList.toggle('over', over);
+  if (state.tipo === 2){
+    teto.innerHTML = `<strong>Entidade incentivada (isenta).</strong> Sem IRPJ/CSLL a deduzir — a economia tributária é zero. O aporte de ${fmtBRLk(c.empA)}/ano é custo cheio.`;
+  } else if (over){
+    teto.innerHTML = `<strong>Atenção: aporte acima do teto.</strong> Dedutível só ${fmtBRLk(c.dedutivelA)}/ano (20% da folha = ${fmtBRLk(c.tetoA)}). O excedente não gera economia.`;
+  } else {
+    teto.innerHTML = `<strong>Dentro do teto.</strong> Aporte ${fmtBRLk(c.empA)}/ano é integralmente dedutível (limite de 20% da folha = ${fmtBRLk(c.tetoA)}/ano). Economia = aporte × 34%.`;
+  }
+
+  const curva = curvaConsolidada();
+  document.getElementById('curvaTit').textContent = curva.length
+    ? `${fmtBRLk(curva[curva.length-1])} na idade-alvo (${state.idadeAlvo} anos)` : 'sem horizonte';
+  drawLine(curva);
+  drawBars(c);
+}
+
+/* ===================== GRÁFICOS SVG ===================== */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+function drawLine(data){
+  const svg = document.getElementById('lineChart'); svg.innerHTML='';
+  const W=520,H=240,ml=58,mr=14,mt=14,mb=26;
+  const iw=W-ml-mr, ih=H-mt-mb;
+  const n=data.length, max=Math.max(1,...data);
+  // gridlines + y labels
+  for(let g=0; g<=4; g++){
+    const y=mt+ih*g/4, val=max*(1-g/4);
+    svg.appendChild(el('line',{x1:ml,y1:y,x2:W-mr,y2:y,stroke:'rgba(16,36,63,.10)','stroke-width':1}));
+    const tx=el('text',{x:ml-7,y:y+3,'text-anchor':'end','font-size':9,'font-family':'IBM Plex Mono, monospace',fill:'#8C95A3'});
+    tx.textContent=fmtBRLk(val); svg.appendChild(tx);
+  }
+  if(n===0){ const t=el('text',{x:W/2,y:H/2,'text-anchor':'middle','font-size':12,fill:'#8C95A3'}); t.textContent='sem dados'; svg.appendChild(t); return; }
+  const xs=i=> n===1? ml+iw/2 : ml + iw*i/(n-1);
+  const ys=v=> mt + ih*(1 - v/max);
+  // área
+  let d=`M ${xs(0)} ${ys(data[0])}`;
+  for(let i=1;i<n;i++) d+=` L ${xs(i)} ${ys(data[i])}`;
+  const area=d+` L ${xs(n-1)} ${mt+ih} L ${xs(0)} ${mt+ih} Z`;
+  svg.appendChild(el('path',{d:area,fill:'rgba(168,128,58,.12)'}));
+  svg.appendChild(el('path',{d:d,fill:'none',stroke:'#A8803A','stroke-width':2}));
+  // ponto final
+  svg.appendChild(el('circle',{cx:xs(n-1),cy:ys(data[n-1]),r:3.5,fill:'#A8803A'}));
+  // x labels (ano 1, meio, fim)
+  const marks = n<=1?[0]:[0,Math.floor((n-1)/2),n-1];
+  marks.forEach(i=>{ const t=el('text',{x:xs(i),y:H-8,'text-anchor':'middle','font-size':9,'font-family':'IBM Plex Mono, monospace',fill:'#8C95A3'}); t.textContent='Ano '+(i+1); svg.appendChild(t); });
+}
+function drawBars(c){
+  const svg=document.getElementById('barChart'); svg.innerHTML='';
+  const W=300,H=240,mt=14,mb=46,ml=10,mr=10;
+  const items=[
+    {lab:'Aporte col.', v:c.colA, fill:'#1A3355'},
+    {lab:'Aporte emp.', v:c.empA, fill:'#A8803A'},
+    {lab:'Economia', v:c.economia, fill:'#C9A765'},
+  ];
+  const max=Math.max(1,...items.map(i=>i.v));
+  const iw=W-ml-mr, ih=H-mt-mb, bw=iw/items.length*0.56, gap=iw/items.length;
+  items.forEach((it,i)=>{
+    const x=ml+gap*i+(gap-bw)/2;
+    const h=ih*it.v/max, y=mt+ih-h;
+    svg.appendChild(el('rect',{x,y,width:bw,height:Math.max(0,h),fill:it.fill}));
+    const vt=el('text',{x:x+bw/2,y:y-5,'text-anchor':'middle','font-size':9.5,'font-family':'IBM Plex Mono, monospace',fill:'#10243F'}); vt.textContent=fmtBRLk(it.v); svg.appendChild(vt);
+    const lt=el('text',{x:x+bw/2,y:H-26,'text-anchor':'middle','font-size':9,fill:'#4A5B74'}); lt.textContent=it.lab; svg.appendChild(lt);
+  });
+  svg.appendChild(el('line',{x1:ml,y1:mt+ih,x2:W-mr,y2:mt+ih,stroke:'rgba(16,36,63,.28)','stroke-width':1}));
+  const note=el('text',{x:W/2,y:H-8,'text-anchor':'middle','font-size':8.5,fill:'#8C95A3'}); note.textContent='valores anuais'; svg.appendChild(note);
+}
+
+/* ===================== VISIBILIDADE POR MODELO ===================== */
+function applyModelVisibility(){
+  const m = state.modelo;
+  document.querySelectorAll('.m-only').forEach(e => {
+    const cls = [...e.classList];
+    let show = cls.includes('m'+m);
+    if (cls.includes('m5fator') && m===5 && state.instFatorEtario) show = true;
+    e.classList.toggle('hidden', !show);
+  });
+}
+
+/* ===================== LISTENERS ===================== */
+function num(id){ return parseFloat(document.getElementById(id).value); }
+function wireParams(){
+  document.getElementById('modelo').addEventListener('change', e => {
+    state.modelo = parseInt(e.target.value,10); applyModelVisibility(); recompute();
+  });
+  document.getElementById('taxa').addEventListener('input', e => { state.taxa = (parseFloat(e.target.value)||0)/100; recompute(); });
+  document.getElementById('idadeAlvo').addEventListener('input', e => { state.idadeAlvo = parseInt(e.target.value,10)||0; recompute(); });
+  document.getElementById('pctUnico').addEventListener('input', e => { state.pctUnico = (parseFloat(e.target.value)||0)/100; recompute(); });
+  document.getElementById('matchingUnico').addEventListener('input', e => { state.matchingUnico = (parseFloat(e.target.value)||0)/100; recompute(); });
+  document.getElementById('matchPlano').addEventListener('input', e => { state.matchPlano = (parseFloat(e.target.value)||0)/100; recompute(); });
+  document.getElementById('pctEmpresaInst').addEventListener('input', e => { state.pctEmpresaInst = (parseFloat(e.target.value)||0)/100; recompute(); });
+
+  document.getElementById('tipoToggle').addEventListener('click', e => {
+    const b = e.target.closest('button[data-tipo]'); if(!b) return;
+    state.tipo = parseInt(b.dataset.tipo,10);
+    [...e.currentTarget.children].forEach(x=>x.classList.toggle('on', x===b));
+    recompute();
+  });
+  document.getElementById('instFatorToggle').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]'); if(!b) return;
+    state.instFatorEtario = b.dataset.v === '1';
+    [...e.currentTarget.children].forEach(x=>x.classList.toggle('on', x===b));
+    applyModelVisibility(); recompute();
+  });
+}
+function onFaixaInput(e){
+  const t = e.target; if(!t.dataset || !t.dataset.key) return;
+  const key=t.dataset.key, i=+t.dataset.i, f=t.dataset.f;
+  const v=parseFloat(t.value)||0;
+  if(f==='lim') state[key][i][0]=v;
+  else state[key][i][1]= v/100; // todos os valores de faixa são % aqui
+  recompute();
+}
+function wireRoster(){
+  const tb=document.getElementById('rosterBody');
+  tb.addEventListener('input', e => {
+    const t=e.target; const i=+t.dataset.i, f=t.dataset.f;
+    if(i===undefined||!f) return;
+    if(f==='nome') state.roster[i].nome=t.value;
+    else state.roster[i][f]=parseFloat(t.value)||0;
+    recompute();
+  });
+  tb.addEventListener('click', e => {
+    const b=e.target.closest('[data-rm]'); if(!b) return;
+    if(state.roster.length<=1) return;
+    state.roster.splice(+b.dataset.rm,1); buildRoster(); recompute();
+  });
+  document.getElementById('addRow').addEventListener('click', () => {
+    state.roster.push({nome:"Novo grupo", qtde:1, salario:5000, idade:35, tempo:1});
+    buildRoster(); recompute();
+  });
+}
+
+/* ===================== AUTOTESTE (âncora do deck) ===================== */
+function selfTest(){
+  const macro = Math.round(deducaoFiscal(220000, 4277000)*100)/100; // espera 74800
+  const el = document.getElementById('selftest');
+  if (macro === 74800.0){
+    el.classList.add('ok');
+    el.innerHTML = '✓ motor confere com o deck — aporte R$ 220.000/ano → economia R$ 74.800/ano (34%)';
+  } else {
+    el.innerHTML = '<span class="x">✗ divergência no motor:</span> macro = '+macro;
+  }
+}
+
+/* ===================== INIT ===================== */
+renderFaixas();
+buildRoster();
+wireParams();
+wireRoster();
+document.addEventListener('input', onFaixaInput);
+applyModelVisibility();
+selfTest();
+recompute();
+</script>
+</body>
+</html>
