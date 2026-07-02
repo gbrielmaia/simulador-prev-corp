@@ -152,6 +152,32 @@
     .field .ctl { margin-left:auto; }
     #modelo, select { max-width:100%; }
   }
+
+  /* ===== ações: link / xlsx / pdf ===== */
+  .doctitle { font-family:'Fraunces',serif; font-size:15px; color:var(--gold-deep); margin-top:6px; display:none; }
+  .docfoot { display:flex; gap:20px; align-items:flex-end; flex-wrap:wrap; margin-top:24px; padding-top:16px; border-top:1px solid var(--rule); }
+  .docfoot .field { flex:1 1 190px; border-bottom:none; padding:0; }
+  .docfoot .field label { display:block; margin-bottom:5px; font-size:11.5px; color:var(--ink-soft); }
+  .docfoot input { width:100%; }
+  .docbtns { display:flex; gap:8px; flex:0 0 auto; flex-wrap:wrap; }
+  .btn { font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:7px 13px; border:1px solid var(--rule-strong); background:#fff; cursor:pointer; color:var(--ink-soft); }
+  .btn:hover { border-color:var(--gold); color:var(--gold-deep); }
+  .toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:var(--ink); color:#fff; font-size:12px; padding:9px 17px; border-radius:4px; opacity:0; transition:.2s; pointer-events:none; font-family:'Inter',sans-serif; z-index:9; }
+  .toast.show { opacity:1; }
+
+  /* ===== impressão / PDF ===== */
+  @media print {
+    .noprint { display:none !important; }
+    .rm, .addrow, .scrollhint { display:none !important; }
+    body { background:#fff; }
+    .wrap { padding:0; max-width:none; }
+    .grid { grid-template-columns:1fr; gap:16px; }
+    .panel, .chartbox, .kpi, table.roster tr { break-inside:avoid; }
+    .rosterwrap { overflow:visible !important; }
+    table.roster { min-width:0 !important; }
+    .doctitle { display:block !important; font-size:21px; margin:10px 0 4px; }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  }
 </style>
 </head>
 <body>
@@ -162,6 +188,7 @@
       <div class="brand"><span class="sym"></span><span class="bn">Chess Capital · Documento Interno</span></div>
       <div class="kicker" style="margin-top:14px;">Previdência Corporativa</div>
       <h1>Simulador <em>interativo</em></h1>
+      <div id="docTitle" class="doctitle"></div>
     </div>
     <div class="right">
       Edite e recalcula ao vivo<br>
@@ -329,6 +356,17 @@
       </div>
     </div>
   </div>
+
+  <section class="docfoot noprint">
+    <div class="field"><label>Empresa <span style="color:var(--ink-mute);font-weight:400;">· identifica o PDF e o link</span></label><input type="text" id="docEmpresa" placeholder="ex.: Nome da empresa"></div>
+    <div class="field"><label>Data</label><input type="date" id="docData"></div>
+    <div class="docbtns">
+      <button class="btn" onclick="copiarLink()">copiar link do cenário</button>
+      <button class="btn" onclick="exportarXlsx()">exportar xlsx</button>
+      <button class="btn" onclick="window.print()">imprimir / PDF</button>
+    </div>
+  </section>
+  <div id="toast" class="toast"></div>
 
   <div class="disc">
     <strong>Aviso.</strong> Material interno de referência — não constitui oferta de previdência nem recomendação tributária.
@@ -691,13 +729,210 @@ function wireRoster(){
   });
 }
 
+/* ===================== TOAST ===================== */
+function toast(msg){
+  const t=document.getElementById('toast'); if(!t) return;
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+/* ===================== CÓPIA DO CENÁRIO (link ?c=) ===================== */
+// Infinity (limite superior das faixas) não sobrevive a JSON — troca por sentinela na ida e na volta.
+function encodeState(){
+  const json=JSON.stringify(state,(k,v)=> v===Infinity ? '__INF__' : v);
+  return btoa(unescape(encodeURIComponent(json)));
+}
+function decodeState(c){
+  const json=decodeURIComponent(escape(atob(c)));
+  return JSON.parse(json,(k,v)=> v==='__INF__' ? Infinity : v);
+}
+function applyState(s){ try{ Object.assign(state, s); }catch(e){} }
+function syncControlsFromState(){
+  const pctIn = v => +((v||0)*100).toFixed(4);   // decimal → % limpo (evita 3.4999…)
+  document.getElementById('modelo').value = String(state.modelo);
+  document.querySelectorAll('#tipoToggle button').forEach(b=> b.classList.toggle('on', +b.dataset.tipo===state.tipo));
+  document.querySelectorAll('#instFatorToggle button').forEach(b=> b.classList.toggle('on', (b.dataset.v==='1')===!!state.instFatorEtario));
+  document.getElementById('idadeAlvo').value = state.idadeAlvo;
+  document.getElementById('pctUnico').value = pctIn(state.pctUnico);
+  document.getElementById('matchingUnico').value = pctIn(state.matchingUnico);
+  document.getElementById('matchPlano').value = pctIn(state.matchPlano);
+  document.getElementById('pctEmpresaInst').value = pctIn(state.pctEmpresaInst);
+  document.getElementById('faturamento').value = state.faturamento;
+  document.getElementById('folhaTotal').value = state.folhaTotal;
+  document.getElementById('irpjCsll').value = state.irpjCsll;
+  document.getElementById('turnover').value = pctIn(state.turnover);
+  document.getElementById('anosSaida').value = state.anosSaida;
+}
+function copiarLink(){
+  // encodeURIComponent: base64 tem '+' '/' '=' e URLSearchParams trocaria '+' por espaço no decode
+  const url=location.origin+location.pathname+'?c='+encodeURIComponent(encodeState());
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+    .then(()=>toast('Link do cenário copiado'))
+    .catch(()=>{ prompt('Copie o link do cenário:', url); });
+}
+
+/* ===================== CABEÇALHO DO DOCUMENTO ===================== */
+function updateDocTitle(){
+  const nome=(document.getElementById('docEmpresa').value||'').trim();
+  const d=document.getElementById('docData').value;
+  const dataFmt = d ? d.split('-').reverse().join('/') : '';
+  const t=[nome,dataFmt].filter(Boolean).join(' · ');
+  const el=document.getElementById('docTitle');
+  el.textContent=t; el.style.display=t?'block':'none';
+  document.title = t ? ('Previdência Corporativa · '+t) : 'Simulador · Previdência Corporativa — Chess Capital';
+}
+function wireDocFields(){
+  const e=document.getElementById('docEmpresa'), d=document.getElementById('docData');
+  e.addEventListener('input', ()=>{ state.docEmpresa=e.value; updateDocTitle(); });
+  d.addEventListener('input', ()=>{ state.docData=d.value; updateDocTitle(); });
+}
+
+/* ===================== EXPORTAR XLSX (zip STORE + XML, sem lib) ===================== */
+const _CRC=(function(){const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function _crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=_CRC[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function _u8(s){return new TextEncoder().encode(s);}
+function _xesc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _col(n){let s='';while(n>0){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}return s;}
+function _sheetXml(rows){
+  let body='';
+  rows.forEach((row,ri)=>{const r=ri+1;let cells='';
+    (row||[]).forEach((v,ci)=>{const ref=_col(ci+1)+r;
+      if(v==null||v==='')return;
+      if(typeof v==='number'&&isFinite(v))cells+='<c r="'+ref+'"><v>'+v+'</v></c>';
+      else cells+='<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+_xesc(v)+'</t></is></c>';});
+    body+='<row r="'+r+'">'+cells+'</row>';});
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+body+'</sheetData></worksheet>';
+}
+function makeXlsx(sheets){
+  const files=[];
+  files.push(['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+sheets.map((s,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>']);
+  files.push(['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>']);
+  files.push(['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((s,i)=>'<sheet name="'+_xesc(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>']);
+  files.push(['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((s,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'</Relationships>']);
+  sheets.forEach((s,i)=>files.push(['xl/worksheets/sheet'+(i+1)+'.xml',_sheetXml(s.rows)]));
+  const chunks=[];let offset=0;const central=[];
+  const le16=n=>[n&0xFF,(n>>>8)&0xFF], le32=n=>{n>>>=0;return [n&0xFF,(n>>>8)&0xFF,(n>>>16)&0xFF,(n>>>24)&0xFF];};
+  const push=b=>{chunks.push(b);offset+=b.length;};
+  files.forEach(([name,content])=>{
+    const nameB=_u8(name),dataB=_u8(content),crc=_crc32(dataB),localOff=offset;
+    push(new Uint8Array([].concat(le32(0x04034b50),le16(20),le16(0),le16(0),le16(0),le16(0),le32(crc),le32(dataB.length),le32(dataB.length),le16(nameB.length),le16(0))));
+    push(nameB);push(dataB);central.push({nameB,crc,len:dataB.length,localOff});});
+  const cdStart=offset;let cd=[];
+  central.forEach(e=>{cd=cd.concat(le32(0x02014b50),le16(20),le16(20),le16(0),le16(0),le16(0),le16(0),le32(e.crc),le32(e.len),le32(e.len),le16(e.nameB.length),le16(0),le16(0),le16(0),le16(0),le32(0),le32(e.localOff));for(let i=0;i<e.nameB.length;i++)cd.push(e.nameB[i]);});
+  push(new Uint8Array(cd));
+  push(new Uint8Array([].concat(le32(0x06054b50),le16(0),le16(0),le16(files.length),le16(files.length),le32(offset-cdStart),le32(cdStart),le16(0))));
+  let total=0;chunks.forEach(c=>total+=c.length);
+  const out=new Uint8Array(total);let p=0;chunks.forEach(c=>{out.set(c,p);p+=c.length;});return out;
+}
+function downloadXlsx(filename,sheets){
+  const blob=new Blob([makeXlsx(sheets)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},100);
+}
+function exportarXlsx(){
+  const c=consolidar();
+  if(!(c.n>0)){ toast('Adicione ao menos um colaborador'); return; }
+  const modeloLabels={1:'Contrapartida básica',2:'Faixa salarial',3:'Matching por idade',4:'Matching por tempo',5:'Instituído'};
+  const empresa=(state.docEmpresa||'').trim(), dataCalc=state.docData||'';
+  const faixaBlock=(titulo,faixas,isPct)=>{
+    const rows=[[],[titulo],['Limite',isPct?'Valor (decimal)':'Valor']];
+    faixas.forEach((f,i)=>{ const last=i===faixas.length-1; rows.push([last?'acima':f[0], f[1]]); });
+    return rows;
+  };
+  const prem=[['SIMULADOR PREVIDÊNCIA CORPORATIVA — EXPORTAÇÃO (checagem)'],[],
+    ['Empresa',empresa||'—'],['Data do cálculo',dataCalc||'—'],[],
+    ['Tipo de entidade',state.tipo===2?'Incentivada (isenta)':'Corporação (Lucro Real)'],
+    ['Modelo de custeio',state.modelo+' · '+modeloLabels[state.modelo]],
+    ['Rentabilidade anual líquida (decimal)',state.taxa],
+    ['Idade-alvo de aposentadoria',state.idadeAlvo],
+    ['Turnover por ciclo (decimal)',state.turnover],
+    ['Ciclo de renovação (anos)',state.anosSaida]];
+  if(state.modelo===1) prem.push(['Aporte único do colaborador (decimal)',state.pctUnico],['Matching único da empresa (decimal)',state.matchingUnico]);
+  if(state.modelo===2) prem.push(['Matching da empresa — sobre aporte col. (decimal)',state.matchPlano]);
+  if(state.modelo===5) prem.push(['Aporte instituído — % do salário (decimal)',state.pctEmpresaInst],['Aplica fator etário',state.instFatorEtario?'Sim':'Não']);
+  prem.push([],['Faturamento anual (contexto)',state.faturamento||'—'],['Folha total (contexto)',state.folhaTotal||'—'],['IRPJ+CSLL/ano (contexto)',state.irpjCsll||'—']);
+  if(state.modelo===2||state.modelo===3||state.modelo===4) prem.push(...faixaBlock('Aporte colaborador por faixa salarial',state.faixasSalariais,true));
+  if(state.modelo===3||(state.modelo===5&&state.instFatorEtario)) prem.push(...faixaBlock('Matching por faixa etária',state.faixasIdade,true));
+  if(state.modelo===4) prem.push(...faixaBlock('Matching por tempo de casa',state.faixasTempo,true));
+  prem.push(...faixaBlock('Vesting por tempo de plano (meses)',state.vesting,true));
+
+  const roster=[['ROSTER DE COLABORADORES (aportes mensais em R$)'],[],
+    ['ID / Grupo','Qtde','Salário','Idade','Tempo','% col. (decimal)','Aporte col./mês','% match (decimal)','Aporte emp./mês','Total/mês']];
+  state.roster.forEach(r=>{
+    const ap=aportesMensais(r.salario,r.idade,r.tempo,state.modelo);
+    const pct=aporteColaboradorPct(r.salario,state.modelo);
+    const mtc=state.modelo===5?null:matchingPct(state.modelo,r.idade,r.tempo);
+    roster.push([r.nome,r.qtde,r.salario,r.idade,r.tempo,state.modelo===5?'—':pct,ap.colaborador,mtc===null?'—':mtc,ap.empresa,ap.total]);
+  });
+
+  const cons=[['CONSOLIDADO ANUAL (R$; percentuais em decimal)'],[],
+    ['Participantes',c.n],
+    ['Aporte colaborador / mês',c.colM],
+    ['Aporte empresa / mês',c.empM],
+    ['Aporte colaborador / ano',c.colA],
+    ['Aporte empresa / ano',c.empA],
+    ['Folha dos participantes / ano',c.folhaA],
+    ['Aporte empresa sobre a folha (decimal)',c.pctFolha],
+    ['Teto dedutível — 20% da folha',c.tetoA],
+    ['Parcela dedutível',c.dedutivelA],
+    ['Economia IRPJ+CSLL / ano (34%)',c.economia],
+    ['Custo líquido / ano',c.liquidoA]];
+  if(state.faturamento>0||state.folhaTotal>0||state.irpjCsll>0){
+    const comT=Math.max(0,state.irpjCsll-c.economia);
+    cons.push([],['COMPARATIVO ANUAL — SEM vs COM PREVIDÊNCIA'],[],
+      ['Item','Sem','Com'],
+      ['Faturamento anual',state.faturamento,state.faturamento],
+      ['Folha salarial (total)',state.folhaTotal,state.folhaTotal],
+      ['Aporte previdência (dedutível)',0,c.dedutivelA],
+      ['IRPJ + CSLL no ano',state.irpjCsll,comT],
+      ['Economia anual',0,c.economia]);
+  }
+
+  const grupos=saldoPorGrupo();
+  const maxAnos=Math.max(0,...grupos.map(g=>g.anos));
+  const proj=[['PROJEÇÃO DE SALDO POR PESSOA (R$; rent. '+Math.round(state.taxa*100)+'%/ano, aporte no fim do ano)'],[],
+    ['Ano',...grupos.map(g=>g.nome)]];
+  const saldos=grupos.map(()=>0), aportesAnuais=grupos.map(g=>g.aporteMes*12);
+  for(let t=1;t<=maxAnos;t++){
+    grupos.forEach((g,gi)=>{ if(t<=g.anos) saldos[gi]=saldos[gi]*(1+state.taxa)+aportesAnuais[gi]; });
+    proj.push([t,...saldos.map(v=>Math.round(v))]);
+  }
+  proj.push([],['Saldo final',...grupos.map(g=>Math.round(g.saldo))],
+    ['Aporte total / mês',...grupos.map(g=>Math.round(g.aporteMes))],
+    ['Anos de acúmulo',...grupos.map(g=>g.anos)]);
+
+  const safe=(empresa||'previdencia').replace(/[^\w\-]+/g,'_').slice(0,40)||'previdencia';
+  downloadXlsx('previdencia_'+safe+'.xlsx',[
+    {name:'Premissas',rows:prem},
+    {name:'Roster',rows:roster},
+    {name:'Consolidado',rows:cons},
+    {name:'Projeção',rows:proj}]);
+  toast('Planilha exportada');
+}
+
 /* ===================== INIT ===================== */
-renderFaixas();
-buildRoster();
 wireParams();
 wireRoster();
+wireDocFields();
 document.addEventListener('input', onFaixaInput);
+
+// restaura cenário compartilhado (?c=...) antes do primeiro render
+try{
+  const _c=new URLSearchParams(location.search).get('c');
+  if(_c){ const s=decodeState(_c); if(s) applyState(s); }
+}catch(e){}
+
+renderFaixas();
+buildRoster();
+syncControlsFromState();
 applyModelVisibility();
+
+// data padrão = hoje, se não veio do link
+if(!state.docData){ const t=new Date(); state.docData=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); }
+document.getElementById('docEmpresa').value=state.docEmpresa||'';
+document.getElementById('docData').value=state.docData||'';
+updateDocTitle();
+
 recompute();
 </script>
 </body>
