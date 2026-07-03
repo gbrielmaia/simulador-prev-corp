@@ -119,6 +119,7 @@
   .teto strong { font-weight:600; }
 
   .charts { display:grid; grid-template-columns:1.55fr 1fr; gap:18px; margin-top:18px; }
+  .charts.single { grid-template-columns:1fr; }
   @media (max-width:760px){ .charts { grid-template-columns:1fr; } }
   .chartbox { border:1px solid var(--rule-strong); background:var(--card); padding:14px 15px; }
   .chartbox .ct { font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; margin-bottom:4px; }
@@ -371,13 +372,13 @@
         <div class="solve" id="solveBox"></div>
         <div id="compara" style="margin-top:16px; display:none;"></div>
 
-        <div class="charts">
+        <div class="charts" id="chartsRow">
           <div class="chartbox">
             <div class="ct">Saldo individual na aposentadoria · por grupo</div>
             <div class="cv" id="curvaTit">o que cada pessoa acumula</div>
             <svg id="groupChart" viewBox="0 0 520 260" preserveAspectRatio="xMidYMid meet"></svg>
           </div>
-          <div class="chartbox">
+          <div class="chartbox" id="barBox">
             <div class="ct">Exercício anual (R$)</div>
             <div class="cv">aporte e economia</div>
             <svg id="barChart" viewBox="0 0 300 240" preserveAspectRatio="xMidYMid meet"></svg>
@@ -389,7 +390,7 @@
         <h2 class="sec adv-h" id="sensH" onclick="toggleSens()">Sensibilidade — economia × nível de aporte</h2>
         <div id="sensWrap" class="hidden">
           <table class="sens"><tbody id="sensBody"></tbody></table>
-          <div class="hint">Varia o aporte da empresa como múltiplo do atual, mantendo o roster fixo. Acima do teto de 20% da folha a economia trava (a parte não dedutível não gera crédito) — linhas em vermelho.</div>
+          <div class="hint">Varia o aporte da empresa nas mesmas proporções do cenário atual, mantendo o roster fixo; a primeira coluna mostra o aporte resultante como <strong>% da folha</strong>. Na Corporação, acima do teto de 20% da folha a economia trava (a parte não dedutível não gera crédito) — linhas em vermelho.</div>
         </div>
       </div>
     </div>
@@ -606,7 +607,11 @@ function recompute(){
   const grupos = saldoPorGrupo();
   document.getElementById('curvaTit').textContent = `por pessoa, até os ${state.idadeAlvo} anos · rent. 8%/ano`;
   drawGroupBars(grupos);
-  drawBars(c);
+  // Incentivada (isenta): sem economia fiscal, o gráfico "aporte e economia" perde sentido — esconde
+  const hideBar = state.tipo === 2;
+  document.getElementById('barBox').classList.toggle('hidden', hideBar);
+  document.getElementById('chartsRow').classList.toggle('single', hideBar);
+  if (!hideBar) drawBars(c);
 }
 
 /* ===================== ABATIMENTO DE CONTRIBUIÇÃO FUTURA (vesting) ===================== */
@@ -972,6 +977,9 @@ function goalSeekTeto(){
 }
 function renderSolve(c){
   const box = document.getElementById('solveBox'); if(!box) return;
+  // Incentivada (isenta): não há teto de 20% a perseguir — some com a caixa inteira (padding/borda incluídos)
+  if(state.tipo === 2){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
   if(!(c.empA>0)){ box.innerHTML = '<div class="sk">Ajuste ao teto de 20%</div><div class="sd">O modelo atual não tem aporte da empresa a calibrar.</div>'; return; }
   const dir = (c.tetoA - c.empA) >= 0 ? 'abaixo' : 'acima';
   box.innerHTML =
@@ -982,15 +990,17 @@ function renderSolve(c){
 function renderSens(c){
   const tb = document.getElementById('sensBody'); if(!tb) return;
   if(!(c.empA>0) || !(c.folhaA>0)){ tb.innerHTML=''; return; }
-  const aliq = state.tipo===2 ? 0 : ALIQUOTA_DEDUCAO;
-  let html = '<tr><th>Nível de aporte</th><th>Aporte emp./ano</th><th>% folha</th><th>Economia</th><th>Custo líq.</th></tr>';
+  const incent = state.tipo===2;
+  const aliq = incent ? 0 : ALIQUOTA_DEDUCAO;
+  // 1ª coluna = aporte como % da folha, nas MESMAS proporções dos fatores atuais (0,50×…2,00×)
+  let html = '<tr><th>Aporte (% folha)</th><th>Aporte emp./ano</th>'+(incent?'':'<th>Economia</th>')+'<th>Custo líq.</th></tr>';
   [0.5,0.75,1.0,1.25,1.5,2.0].forEach(f=>{
     const emp = c.empA*f, ded = Math.min(emp, c.tetoA), econ = ded*aliq, liq = emp-econ;
     const pct = c.folhaA ? emp/c.folhaA : 0;
-    const over = emp > c.tetoA + 0.5, base = Math.abs(f-1)<1e-9;
+    const over = !incent && emp > c.tetoA + 0.5, base = Math.abs(f-1)<1e-9;
     const cls = [base?'base':'', over?'over':''].filter(Boolean).join(' ');
-    const lab = base ? 'atual · 1,00×' : f.toLocaleString('pt-BR',{minimumFractionDigits:2})+'×';
-    html += `<tr${cls?` class="${cls}"`:''}><td>${lab}</td><td>${fmtBRLk(emp)}</td><td>${fmtPct1(pct)}</td><td class="gold">${econ>0?fmtBRLk(econ):'—'}</td><td>${fmtBRLk(liq)}</td></tr>`;
+    const lab = base ? fmtPct1(pct)+' · atual' : fmtPct1(pct);
+    html += `<tr${cls?` class="${cls}"`:''}><td>${lab}</td><td>${fmtBRLk(emp)}</td>`+(incent?'':`<td class="gold">${econ>0?fmtBRLk(econ):'—'}</td>`)+`<td>${fmtBRLk(liq)}</td></tr>`;
   });
   tb.innerHTML = html;
 }
