@@ -99,6 +99,7 @@
   table.roster td.calc.gold { color:var(--gold-deep); }
   table.roster input { width:100%; }
   table.roster input.nome { text-align:left; font-family:'Inter',sans-serif; }
+  table.roster input.sal { text-align:right; }
   table.roster input[type=number] { width:100%; }
   .rm { cursor:pointer; color:var(--ink-mute); border:none; background:none; font-size:15px; line-height:1; padding:0 2px; }
   .rm:hover { color:#a33; }
@@ -439,6 +440,9 @@ const state = {
   ],
 };
 
+// snapshot do estado inicial — o link do cenário carrega só o que difere disto (mantém a URL curta)
+const DEFAULT_STATE = structuredClone(state);
+
 function lookup(valor, faixas){
   for (const [lim, res] of faixas){ if (valor <= lim) return res; }
   return faixas[faixas.length-1][1];
@@ -551,7 +555,7 @@ function buildRoster(){
     tr.innerHTML =
       `<td class="l"><input class="nome" data-i="${i}" data-f="nome" value="${r.nome}"></td>`+
       `<td><input type="number" data-i="${i}" data-f="qtde" value="${r.qtde}"></td>`+
-      `<td><input type="number" data-i="${i}" data-f="salario" step="500" value="${r.salario}"></td>`+
+      `<td><input type="text" inputmode="numeric" class="sal" data-i="${i}" data-f="salario" value="${(r.salario||0).toLocaleString('pt-BR')}"></td>`+
       `<td><input type="number" data-i="${i}" data-f="idade" value="${r.idade}"></td>`+
       `<td><input type="number" data-i="${i}" data-f="tempo" value="${r.tempo}"></td>`+
       `<td class="calc" data-c="pct${i}"></td>`+
@@ -762,9 +766,16 @@ function wireRoster(){
     const t=e.target; const i=+t.dataset.i, f=t.dataset.f;
     if(i===undefined||!f) return;
     if(f==='nome') state.roster[i].nome=t.value;
+    else if(f==='salario') state.roster[i].salario=moneyDigits(t.value); // entrada contábil (milhar)
     else state.roster[i][f]=parseFloat(t.value)||0;
     recompute();
   });
+  // reformata o salário ao sair do campo (mostra "4.000" em vez de "4000")
+  tb.addEventListener('blur', e => {
+    const t=e.target; if(!t.dataset || t.dataset.f!=='salario') return;
+    const i=+t.dataset.i; if(!state.roster[i]) return;
+    t.value = state.roster[i].salario ? state.roster[i].salario.toLocaleString('pt-BR') : '';
+  }, true);
   tb.addEventListener('click', e => {
     const b=e.target.closest('[data-rm]'); if(!b) return;
     if(state.roster.length<=1) return;
@@ -784,13 +795,54 @@ function toast(msg){
 }
 
 /* ===================== CÓPIA DO CENÁRIO (link ?c=) ===================== */
-// Infinity (limite superior das faixas) não sobrevive a JSON — troca por sentinela na ida e na volta.
-function encodeState(){
-  const json=JSON.stringify(state,(k,v)=> v===Infinity ? '__INF__' : v);
-  return btoa(unescape(encodeURIComponent(json)));
+// Link curto: (1) manda só o que difere do padrão; (2) comprime com deflate-raw quando o navegador suporta.
+// Prefixos do parâmetro ?c= :  'z' = deflate-raw+base64url · 'p' = base64url sem compressão · "ey…" = legado (JSON completo em base64).
+// Infinity (limite superior das faixas) não sobrevive a JSON — troca por sentinela '__INF__' na ida e na volta.
+function _b64urlFromBytes(bytes){
+  let s=''; for(const b of bytes) s+=String.fromCharCode(b);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
-function decodeState(c){
-  const json=decodeURIComponent(escape(atob(c)));
+function _bytesFromB64url(str){
+  str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4) str+='=';
+  const bin=atob(str), out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out;
+}
+function _diffFromDefault(){
+  const d=DEFAULT_STATE, out={};
+  for(const k in state){
+    const complex = (k==='roster'||k==='vesting'||k.startsWith('faixas'));
+    if(complex){ if(JSON.stringify(state[k])!==JSON.stringify(d[k])) out[k]=state[k]; }
+    else if(state[k]!==d[k]) out[k]=state[k];
+  }
+  return out;
+}
+async function encodeState(){
+  const json=JSON.stringify(_diffFromDefault(),(k,v)=> v===Infinity ? '__INF__' : v);
+  const bytes=new TextEncoder().encode(json);
+  const plano='p'+_b64urlFromBytes(bytes);
+  if(typeof CompressionStream!=='undefined'){
+    try{
+      const cs=new CompressionStream('deflate-raw');
+      const w=cs.writable.getWriter(); w.write(bytes); w.close();
+      const buf=new Uint8Array(await new Response(cs.readable).arrayBuffer());
+      const z='z'+_b64urlFromBytes(buf);
+      return z.length < plano.length ? z : plano;   // usa o comprimido só se ficou mesmo menor
+    }catch(e){}
+  }
+  return plano;
+}
+async function decodeState(c){
+  let json;
+  if(c[0]==='z'){
+    const ds=new DecompressionStream('deflate-raw');
+    const w=ds.writable.getWriter(); w.write(_bytesFromB64url(c.slice(1))); w.close();
+    json=new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+  } else if(c[0]==='p'){
+    json=new TextDecoder().decode(_bytesFromB64url(c.slice(1)));
+  } else {
+    json=decodeURIComponent(escape(atob(c)));   // formato legado (links antigos, JSON completo)
+  }
   return JSON.parse(json,(k,v)=> v==='__INF__' ? Infinity : v);
 }
 function applyState(s){ try{ Object.assign(state, s); }catch(e){} }
@@ -810,9 +862,9 @@ function syncControlsFromState(){
   document.getElementById('turnover').value = pctIn(state.turnover);
   document.getElementById('anosSaida').value = state.anosSaida;
 }
-function copiarLink(){
-  // encodeURIComponent: base64 tem '+' '/' '=' e URLSearchParams trocaria '+' por espaço no decode
-  const url=location.origin+location.pathname+'?c='+encodeURIComponent(encodeState());
+async function copiarLink(){
+  // base64url já é URL-safe; encodeURIComponent mantido por segurança (idempotente aqui)
+  const url=location.origin+location.pathname+'?c='+encodeURIComponent(await encodeState());
   (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
     .then(()=>toast('Link do cenário copiado'))
     .catch(()=>{ prompt('Copie o link do cenário:', url); });
@@ -1015,24 +1067,26 @@ wireRoster();
 wireDocFields();
 document.addEventListener('input', onFaixaInput);
 
-// restaura cenário compartilhado (?c=...) antes do primeiro render
-try{
-  const _c=new URLSearchParams(location.search).get('c');
-  if(_c){ const s=decodeState(_c); if(s) applyState(s); }
-}catch(e){}
+// restaura cenário compartilhado (?c=...) antes do primeiro render — decode é async (descompressão)
+(async function initCenario(){
+  try{
+    const _c=new URLSearchParams(location.search).get('c');
+    if(_c){ const s=await decodeState(_c); if(s) applyState(s); }
+  }catch(e){}
 
-renderFaixas();
-buildRoster();
-syncControlsFromState();
-applyModelVisibility();
+  renderFaixas();
+  buildRoster();
+  syncControlsFromState();
+  applyModelVisibility();
 
-// data padrão = hoje, se não veio do link
-if(!state.docData){ const t=new Date(); state.docData=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); }
-document.getElementById('docEmpresa').value=state.docEmpresa||'';
-document.getElementById('docData').value=state.docData||'';
-updateDocTitle();
+  // data padrão = hoje, se não veio do link
+  if(!state.docData){ const t=new Date(); state.docData=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); }
+  document.getElementById('docEmpresa').value=state.docEmpresa||'';
+  document.getElementById('docData').value=state.docData||'';
+  updateDocTitle();
 
-recompute();
+  recompute();
+})();
 </script>
 </body>
 </html>
