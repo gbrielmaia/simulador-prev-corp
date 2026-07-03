@@ -165,6 +165,34 @@
   .toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:var(--ink); color:#fff; font-size:12px; padding:9px 17px; border-radius:4px; opacity:0; transition:.2s; pointer-events:none; font-family:'Inter',sans-serif; z-index:9; }
   .toast.show { opacity:1; }
 
+  /* ===== ajuda (i) ===== */
+  .help { display:inline-block; width:13px; height:13px; line-height:12px; text-align:center; border-radius:50%; border:1px solid var(--rule-strong); color:var(--ink-mute); font-size:9px; cursor:help; margin-left:5px; font-weight:600; vertical-align:middle; font-family:'Inter',sans-serif; }
+  .help:hover { border-color:var(--gold); color:var(--gold-deep); }
+  .ft .help, .lab .help { margin-left:4px; }
+
+  /* ===== seção colapsável ===== */
+  .adv-h { cursor:pointer; user-select:none; }
+  .adv-h::before { content:"▸ "; color:var(--gold); }
+  .adv-h.open::before { content:"▾ "; }
+
+  /* ===== goal-seek (ajuste ao teto) ===== */
+  .solve { margin-top:14px; padding:11px 14px; background:var(--accent-bg); border-left:2px solid var(--gold); }
+  .solve .sk { font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold-deep); font-weight:600; }
+  .solve .sd { font-size:10.5px; line-height:1.5; color:var(--ink-soft); margin:5px 0 9px; }
+  .solve .sd b { color:var(--ink); }
+  .solvebtn { font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:6px 12px; border:1px solid var(--gold); background:#fff; color:var(--gold-deep); cursor:pointer; }
+  .solvebtn:hover { background:var(--gold); color:#fff; }
+
+  /* ===== tabela de sensibilidade ===== */
+  table.sens { width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:11px; margin-top:8px; }
+  table.sens th { font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-mute); font-weight:600; text-align:right; padding:5px 7px; border-bottom:1px solid var(--rule-strong); }
+  table.sens th:first-child { text-align:left; }
+  table.sens td { text-align:right; padding:5px 7px; border-bottom:1px dotted var(--rule); color:var(--ink-soft); }
+  table.sens td:first-child { text-align:left; font-family:'Inter',sans-serif; }
+  table.sens tr.base td { background:var(--accent-bg); color:var(--ink); font-weight:600; }
+  table.sens tr.over td { color:#a33; }
+  table.sens td.gold { color:var(--gold-deep); }
+
   /* ===== impressão / PDF ===== */
   @media print {
     .noprint { display:none !important; }
@@ -176,6 +204,7 @@
     .rosterwrap { overflow:visible !important; }
     table.roster { min-width:0 !important; }
     .doctitle { display:block !important; font-size:21px; margin:10px 0 4px; }
+    #sensWrap { display:block !important; }
     * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
   }
 </style>
@@ -205,7 +234,7 @@
         <h2 class="sec">Parâmetros do plano</h2>
 
         <div class="field">
-          <label>Tipo de entidade</label>
+          <label>Tipo de entidade<span class="help" title="Corporação (Lucro Real): deduz IRPJ+CSLL sobre o aporte à previdência. Entidade incentivada é isenta — não há imposto a deduzir, então a economia tributária é zero.">i</span></label>
           <div class="ctl toggle" id="tipoToggle">
             <button data-tipo="1" class="on">Corporação</button>
             <button data-tipo="2">Incentivada</button>
@@ -213,7 +242,7 @@
         </div>
 
         <div class="field">
-          <label>Modelo de custeio</label>
+          <label>Modelo de custeio<span class="help" title="Como o aporte é calculado. Cada modelo usa parâmetros diferentes (ver legenda abaixo); ao trocar, aparecem os campos correspondentes.">i</span></label>
           <div class="ctl">
             <select id="modelo">
               <option value="1" selected>1 · Contrapartida básica</option>
@@ -234,32 +263,32 @@
         </div>
 
         <div class="field">
-          <label>Rentabilidade anual líquida</label>
+          <label>Rentabilidade anual líquida<span class="help" title="Premissa fixa e ilustrativa de rentabilidade líquida do plano (8% a.a.), usada na projeção de saldo. Capitalização anual.">i</span></label>
           <div class="ctl"><span class="fixedval">8%</span><span class="suffix">fixa</span></div>
         </div>
 
         <div class="field">
-          <label>Idade-alvo de aposentadoria</label>
+          <label>Idade-alvo de aposentadoria<span class="help" title="Idade de aposentadoria. O saldo de cada grupo acumula da idade atual até essa idade; depois é mantido.">i</span></label>
           <div class="ctl"><input type="number" id="idadeAlvo" value="65" step="1"><span class="suffix">anos</span></div>
         </div>
 
         <!-- modelo 1 -->
         <div class="field m-only m1">
-          <label>Aporte único do colaborador</label>
+          <label>Aporte único do colaborador<span class="help" title="Percentual do salário que o colaborador aporta (modelo 1).">i</span></label>
           <div class="ctl"><input type="number" id="pctUnico" value="6" step="1"><span class="suffix">%</span></div>
         </div>
         <div class="field m-only m1">
-          <label>Matching único da empresa</label>
+          <label>Matching único da empresa<span class="help" title="Quanto a empresa aporta como % do aporte do colaborador. 100% = iguala o colaborador; 50% = metade.">i</span></label>
           <div class="ctl"><input type="number" id="matchingUnico" value="100" step="25"><span class="suffix">%</span></div>
         </div>
 
         <!-- modelo 5 -->
         <div class="field m-only m5">
-          <label>Aporte instituído (% do salário)</label>
+          <label>Aporte instituído (% do salário)<span class="help" title="No modelo Instituído só a empresa aporta — este % do salário. O colaborador não contribui.">i</span></label>
           <div class="ctl"><input type="number" id="pctEmpresaInst" value="3" step="0.5"><span class="suffix">%</span></div>
         </div>
         <div class="field m-only m5">
-          <label>Aplicar fator etário</label>
+          <label>Aplicar fator etário<span class="help" title="Se ligado, o aporte instituído é multiplicado pelo fator da faixa etária (tabela ao lado), crescendo com a idade.">i</span></label>
           <div class="ctl toggle" id="instFatorToggle">
             <button data-v="0" class="on">Não</button>
             <button data-v="1">Sim</button>
@@ -271,40 +300,40 @@
         <h2 class="sec">Faixas editáveis</h2>
 
         <div class="faixa m-only m2 m3 m4" id="boxSalarial">
-          <div class="ft">Aporte do colaborador · por faixa salarial</div>
+          <div class="ft">Aporte do colaborador · por faixa salarial<span class="help" title="% que o colaborador aporta conforme a faixa de salário (modelos 2, 3 e 4). Limite = teto superior da faixa; a última é 'acima'.">i</span></div>
           <table class="ftab" id="ftSalarial"></table>
         </div>
 
         <div class="faixa m-only m2" id="boxMatchPlano">
-          <div class="ft">Matching da empresa</div>
+          <div class="ft">Matching da empresa<span class="help" title="Matching fixo da empresa sobre o aporte do colaborador (modelo 2).">i</span></div>
           <table class="ftab"><tr><td>Sobre o aporte do colaborador</td><td><input type="number" id="matchPlano" value="100" step="25"> %</td></tr></table>
         </div>
 
         <div class="faixa m-only m3 m5fator" id="boxIdade">
-          <div class="ft">Matching · por faixa etária</div>
+          <div class="ft">Matching · por faixa etária<span class="help" title="Multiplicador do matching por idade (modelo 3, ou fator etário do instituído): quanto mais velho, maior a contrapartida.">i</span></div>
           <table class="ftab" id="ftIdade"></table>
         </div>
 
         <div class="faixa m-only m4" id="boxTempo">
-          <div class="ft">Matching · por tempo de casa (anos)</div>
+          <div class="ft">Matching · por tempo de casa (anos)<span class="help" title="Multiplicador do matching por tempo de casa (modelo 4): premia a permanência.">i</span></div>
           <table class="ftab" id="ftTempo"></table>
         </div>
 
         <div class="faixa">
-          <div class="ft">Vesting · liberação da parte da empresa (meses)</div>
+          <div class="ft">Vesting · liberação da parte da empresa (meses)<span class="help" title="Fração do saldo aportado pela empresa que o colaborador leva ao sair, por tempo de plano. Governa a retenção; não muda a economia fiscal.">i</span></div>
           <table class="ftab" id="ftVesting"></table>
           <div class="hint">Define quanto do saldo aportado pela empresa o colaborador leva ao sair, por tempo de plano. Não afeta a economia tributária; governa a retenção.</div>
-          <div class="field" style="margin-top:8px;"><label>% da base que sai por ciclo</label><div class="ctl"><input type="number" id="turnover" value="20" step="5"><span class="suffix">%</span></div></div>
-          <div class="field"><label>Ciclo de renovação</label><div class="ctl"><input type="number" id="anosSaida" value="5" step="1"><span class="suffix">anos</span></div></div>
+          <div class="field" style="margin-top:8px;"><label>% da base que sai por ciclo<span class="help" title="Turnover: fração dos participantes que sai a cada ciclo de renovação.">i</span></label><div class="ctl"><input type="number" id="turnover" value="20" step="5"><span class="suffix">%</span></div></div>
+          <div class="field"><label>Ciclo de renovação<span class="help" title="Intervalo, em anos, entre as saídas consideradas no abatimento de contribuição futura.">i</span></label><div class="ctl"><input type="number" id="anosSaida" value="5" step="1"><span class="suffix">anos</span></div></div>
           <div class="vrec" id="vestRec"></div>
         </div>
       </div>
 
       <div class="panel">
         <h2 class="sec">Dados da empresa <span class="gold-tab">· opcional</span></h2>
-        <div class="field"><label>Faturamento anual</label><div class="ctl"><span class="suffix">R$</span><input type="number" class="num-l" id="faturamento" value="0" step="100000"></div></div>
-        <div class="field"><label>Folha salarial (total)</label><div class="ctl"><span class="suffix">R$</span><input type="number" class="num-l" id="folhaTotal" value="0" step="100000"></div></div>
-        <div class="field"><label>IRPJ + CSLL pago / ano</label><div class="ctl"><span class="suffix">R$</span><input type="number" class="num-l" id="irpjCsll" value="0" step="50000"></div></div>
+        <div class="field"><label>Faturamento anual<span class="help" title="Contexto para o comparativo sem/com previdência. Não altera o cálculo da economia.">i</span></label><div class="ctl"><span class="suffix">R$</span><input type="text" inputmode="numeric" class="num-l money" id="faturamento" placeholder="0"></div></div>
+        <div class="field"><label>Folha salarial (total)<span class="help" title="Folha total da empresa (contexto). O teto de 20% incide sobre a folha dos PARTICIPANTES (somada do roster), não sobre esta.">i</span></label><div class="ctl"><span class="suffix">R$</span><input type="text" inputmode="numeric" class="num-l money" id="folhaTotal" placeholder="0"></div></div>
+        <div class="field"><label>IRPJ + CSLL pago / ano<span class="help" title="Imposto anual atual da empresa. Serve para mostrar, no comparativo, quanto a previdência abate (economia = parcela dedutível × 34%).">i</span></label><div class="ctl"><span class="suffix">R$</span><input type="text" inputmode="numeric" class="num-l money" id="irpjCsll" placeholder="0"></div></div>
         <div class="hint">Preencha para ver o comparativo <em>sem vs com previdência</em> no dashboard. O teto de 20% segue sobre a folha dos <strong>participantes</strong> (somada do roster); a folha aqui é a <strong>total</strong> da empresa, exibida como contexto.</div>
       </div>
     </div>
@@ -339,6 +368,7 @@
           <div class="kpi"><div class="lab">Custo líquido / ano</div><div class="val" id="kLiq">—</div><div class="sub" id="kLiqM"></div></div>
         </div>
         <div class="teto" id="tetoBox"></div>
+        <div class="solve" id="solveBox"></div>
         <div id="compara" style="margin-top:16px; display:none;"></div>
 
         <div class="charts">
@@ -352,6 +382,14 @@
             <div class="cv">aporte e economia</div>
             <svg id="barChart" viewBox="0 0 300 240" preserveAspectRatio="xMidYMid meet"></svg>
           </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="sec adv-h" id="sensH" onclick="toggleSens()">Sensibilidade — economia × nível de aporte</h2>
+        <div id="sensWrap" class="hidden">
+          <table class="sens"><tbody id="sensBody"></tbody></table>
+          <div class="hint">Varia o aporte da empresa como múltiplo do atual, mantendo o roster fixo. Acima do teto de 20% da folha a economia trava (a parte não dedutível não gera crédito) — linhas em vermelho.</div>
         </div>
       </div>
     </div>
@@ -562,6 +600,8 @@ function recompute(){
 
   renderComparativo(c);
   renderVesting();
+  renderSolve(c);
+  renderSens(c);
 
   const grupos = saldoPorGrupo();
   document.getElementById('curvaTit').textContent = `por pessoa, até os ${state.idadeAlvo} anos · rent. 8%/ano`;
@@ -683,7 +723,9 @@ function wireParams(){
   document.getElementById('matchPlano').addEventListener('input', e => { state.matchPlano = (parseFloat(e.target.value)||0)/100; recompute(); });
   document.getElementById('pctEmpresaInst').addEventListener('input', e => { state.pctEmpresaInst = (parseFloat(e.target.value)||0)/100; recompute(); });
   ['faturamento','folhaTotal','irpjCsll'].forEach(id => {
-    document.getElementById(id).addEventListener('input', e => { state[id] = parseFloat(e.target.value)||0; recompute(); });
+    const el = document.getElementById(id);
+    el.addEventListener('input', e => { state[id] = moneyDigits(e.target.value); recompute(); });
+    el.addEventListener('blur',  e => { e.target.value = state[id] ? state[id].toLocaleString('pt-BR') : ''; });
   });
   document.getElementById('turnover').addEventListener('input', e => { state.turnover = (parseFloat(e.target.value)||0)/100; recompute(); });
   document.getElementById('anosSaida').addEventListener('input', e => { state.anosSaida = Math.max(0, parseInt(e.target.value,10)||0); recompute(); });
@@ -757,9 +799,9 @@ function syncControlsFromState(){
   document.getElementById('matchingUnico').value = pctIn(state.matchingUnico);
   document.getElementById('matchPlano').value = pctIn(state.matchPlano);
   document.getElementById('pctEmpresaInst').value = pctIn(state.pctEmpresaInst);
-  document.getElementById('faturamento').value = state.faturamento;
-  document.getElementById('folhaTotal').value = state.folhaTotal;
-  document.getElementById('irpjCsll').value = state.irpjCsll;
+  document.getElementById('faturamento').value = state.faturamento ? state.faturamento.toLocaleString('pt-BR') : '';
+  document.getElementById('folhaTotal').value = state.folhaTotal ? state.folhaTotal.toLocaleString('pt-BR') : '';
+  document.getElementById('irpjCsll').value = state.irpjCsll ? state.irpjCsll.toLocaleString('pt-BR') : '';
   document.getElementById('turnover').value = pctIn(state.turnover);
   document.getElementById('anosSaida').value = state.anosSaida;
 }
@@ -908,6 +950,53 @@ function exportarXlsx(){
     {name:'Consolidado',rows:cons},
     {name:'Projeção',rows:proj}]);
   toast('Planilha exportada');
+}
+
+/* ===================== MÁSCARA DE MOEDA + GOAL-SEEK + SENSIBILIDADE ===================== */
+function moneyDigits(s){ return parseInt(String(s).replace(/\D/g,''),10) || 0; }
+
+// O aporte da empresa é LINEAR no lever do modelo (matching/instituído), então
+// fator = teto / aporte_atual leva o aporte a bater exatamente 20% da folha (dedução máxima).
+function goalSeekTeto(){
+  const c = consolidar();
+  if(!(c.folhaA>0)){ toast('Cadastre o roster primeiro'); return; }
+  if(!(c.empA>0)){ toast('Este modelo não tem aporte da empresa a ajustar'); return; }
+  const f = c.tetoA / c.empA, m = state.modelo;
+  if(m===1) state.matchingUnico *= f;
+  else if(m===2) state.matchPlano *= f;
+  else if(m===3) state.faixasIdade = state.faixasIdade.map(x=>[x[0], x[1]*f]);
+  else if(m===4) state.faixasTempo = state.faixasTempo.map(x=>[x[0], x[1]*f]);
+  else if(m===5) state.pctEmpresaInst *= f;
+  renderFaixas(); syncControlsFromState(); recompute();
+  toast('Aporte calibrado ao teto de 20% da folha');
+}
+function renderSolve(c){
+  const box = document.getElementById('solveBox'); if(!box) return;
+  if(!(c.empA>0)){ box.innerHTML = '<div class="sk">Ajuste ao teto de 20%</div><div class="sd">O modelo atual não tem aporte da empresa a calibrar.</div>'; return; }
+  const dir = (c.tetoA - c.empA) >= 0 ? 'abaixo' : 'acima';
+  box.innerHTML =
+    '<div class="sk">Ajuste ao teto de 20%</div>'+
+    `<div class="sd">Aporte atual = <b>${fmtPct1(c.pctFolha)}</b> da folha (${fmtBRLk(c.empA)}/ano); o teto dedutível é <b>20%</b> (${fmtBRLk(c.tetoA)}/ano) — você está <b>${dir}</b>. Calibra o matching do modelo para o aporte bater exatamente o teto.</div>`+
+    '<button class="solvebtn" onclick="goalSeekTeto()">calibrar matching ao teto</button>';
+}
+function renderSens(c){
+  const tb = document.getElementById('sensBody'); if(!tb) return;
+  if(!(c.empA>0) || !(c.folhaA>0)){ tb.innerHTML=''; return; }
+  const aliq = state.tipo===2 ? 0 : ALIQUOTA_DEDUCAO;
+  let html = '<tr><th>Nível de aporte</th><th>Aporte emp./ano</th><th>% folha</th><th>Economia</th><th>Custo líq.</th></tr>';
+  [0.5,0.75,1.0,1.25,1.5,2.0].forEach(f=>{
+    const emp = c.empA*f, ded = Math.min(emp, c.tetoA), econ = ded*aliq, liq = emp-econ;
+    const pct = c.folhaA ? emp/c.folhaA : 0;
+    const over = emp > c.tetoA + 0.5, base = Math.abs(f-1)<1e-9;
+    const cls = [base?'base':'', over?'over':''].filter(Boolean).join(' ');
+    const lab = base ? 'atual · 1,00×' : f.toLocaleString('pt-BR',{minimumFractionDigits:2})+'×';
+    html += `<tr${cls?` class="${cls}"`:''}><td>${lab}</td><td>${fmtBRLk(emp)}</td><td>${fmtPct1(pct)}</td><td class="gold">${econ>0?fmtBRLk(econ):'—'}</td><td>${fmtBRLk(liq)}</td></tr>`;
+  });
+  tb.innerHTML = html;
+}
+function toggleSens(){
+  document.getElementById('sensWrap').classList.toggle('hidden');
+  document.getElementById('sensH').classList.toggle('open');
 }
 
 /* ===================== INIT ===================== */
