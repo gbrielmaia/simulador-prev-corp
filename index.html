@@ -622,24 +622,32 @@ function recompute(){
 /* ===================== ABATIMENTO DE CONTRIBUIÇÃO FUTURA (vesting) ===================== */
 function renderVesting(){
   const box = document.getElementById('vestRec');
-  const anos = state.anosSaida, meses = anos * 12;
-  const vest = vestingPct(meses), naoVestido = 1 - vest;
-  let total = 0, leavers = 0;
+  const anos = state.anosSaida, N = anos * MESES_ANO;
+  const im = Math.pow(1 + state.taxa, 1 / MESES_ANO) - 1;
+  let totalRecup = 0, totalSaldo = 0, leavers = 0;
   for (const r of state.roster){
     const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
-    const im = Math.pow(1 + state.taxa, 1 / MESES_ANO) - 1;
-    // saldo financiado pela empresa para cada pessoa, ao fim de um ciclo (capitalização mensal)
-    let saldoEmp = 0;
-    for (let t=0; t<anos; t++){ for (let m=0; m<MESES_ANO; m++) saldoEmp = saldoEmp * (1 + im) + ap.empresa; }
     const saem = state.turnover * r.qtde;
-    total += saem * naoVestido * saldoEmp;   // só a parcela NÃO vestida abate contribuições futuras
+    // vesting apurado APORTE A APORTE: cada mês vesta pelo seu próprio tempo de casa.
+    // Aporte mais antigo -> mais vestido (empresa recupera menos); recentes -> menos
+    // vestidos (recupera mais, até 100% no último ano).
+    let saldoEmp = 0, recupPessoa = 0;
+    for (let m=1; m<=N; m++){
+      const idade = N - m;                            // meses desde o aporte, na saída
+      const val = ap.empresa * Math.pow(1 + im, idade);
+      saldoEmp += val;
+      recupPessoa += val * (1 - vestingPct(idade));   // parcela NÃO vestida volta à empresa
+    }
+    totalRecup += saem * recupPessoa;
+    totalSaldo += saem * saldoEmp;
     leavers += saem;
   }
-  const anualEq = anos > 0 ? total / anos : 0;
+  const anualEq = anos > 0 ? totalRecup / anos : 0;
+  const retido = totalSaldo > 0 ? totalRecup / totalSaldo : 0;
   box.innerHTML =
     '<div class="vk">Abatimento de contribuição futura · empresa</div>'+
-    `<div class="big">${fmtBRLk(total)} <span class="med">por ciclo (a cada ${anos} ${anos===1?'ano':'anos'})</span></div>`+
-    `<div class="vd">A cada ${anos} ${anos===1?'ano':'anos'}, <b>${fmtPct0(state.turnover)}</b> da base sai com vesting de ${fmtPct0(vest)}; a parcela não-vestida (<b>${fmtPct0(naoVestido)}</b>) do saldo patronal de cada um <b>abate as contribuições futuras</b> da empresa. ${Math.round(leavers)} ${Math.round(leavers)===1?'pessoa':'pessoas'} por ciclo · ≈ ${fmtBRLk(anualEq)}/ano.</div>`;
+    `<div class="big">${fmtBRLk(totalRecup)} <span class="med">por ciclo (a cada ${anos} ${anos===1?'ano':'anos'})</span></div>`+
+    `<div class="vd">A cada ${anos} ${anos===1?'ano':'anos'}, <b>${fmtPct0(state.turnover)}</b> da base sai. O vesting é apurado <b>aporte a aporte</b> (cada mês vesta pelo seu tempo de casa): em média <b>${fmtPct0(retido)}</b> do saldo patronal de quem sai ainda não está vestido e <b>retorna à empresa</b>, abatendo contribuições futuras. ${Math.round(leavers)} ${Math.round(leavers)===1?'pessoa':'pessoas'} por ciclo · ≈ ${fmtBRLk(anualEq)}/ano.</div>`;
 }
 
 /* ===================== COMPARATIVO SEM/COM PREVIDÊNCIA ===================== */
