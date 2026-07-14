@@ -265,7 +265,7 @@
         </div>
 
         <div class="field">
-          <label>Rentabilidade anual líquida<span class="help" title="Premissa fixa e ilustrativa de rentabilidade líquida do plano (8% a.a.), usada na projeção de saldo. Capitalização anual.">i</span></label>
+          <label>Rentabilidade anual líquida<span class="help" title="Premissa fixa e ilustrativa de rentabilidade líquida do plano (8% a.a.), usada na projeção de saldo. Capitalização mensal (taxa equivalente).">i</span></label>
           <div class="ctl"><span class="fixedval">8%</span><span class="suffix">fixa</span></div>
         </div>
 
@@ -412,7 +412,7 @@
     <strong>Aviso.</strong> Material interno de referência — não constitui oferta de previdência nem recomendação tributária.
     Planos PGBL/VGBL operados por seguradora habilitada pela SUSEP. A dedução de 34% (IRPJ 25% + CSLL 9%) pressupõe apuração
     pelo <strong>Lucro Real</strong> e está limitada a 20% da folha dos participantes; entidades incentivadas (isentas) não têm dedução.
-    Capitalização anual, aporte no fim do ano, salário constante em termos reais. Valores ilustrativos.
+    Capitalização mensal (taxa equivalente a 8% a.a.), aporte mensal, salário constante em termos reais. Valores ilustrativos.
     Motor de cálculo idêntico ao <strong>engine.py</strong> do workbook <strong>Simulador_Prev_Corp_Chess.xlsm</strong>.
   </div>
 </div>
@@ -471,12 +471,13 @@ function aportesMensais(salario, idade, tempo, modelo){
   }
   return { colaborador, empresa, total: colaborador + empresa };
 }
-function projetarSaldoHorizonte(idade, idadeAlvo, aporteAnual, taxa, H){
-  // acumula enquanto idade+t <= idade_alvo; depois segura o saldo (espelha a Projeção do Excel)
+function projetarSaldoHorizonte(idade, idadeAlvo, aporteMensal, taxa, H){
+  // acumula enquanto idade+t <= idade_alvo; depois segura o saldo. Capitalização mensal.
   const anos = Math.max(0, idadeAlvo - idade);
+  const im = Math.pow(1 + taxa, 1 / MESES_ANO) - 1;
   const out = []; let saldo = 0.0;
   for (let t = 1; t <= H; t++){
-    if (t <= anos) saldo = saldo * (1 + taxa) + aporteAnual;
+    if (t <= anos){ for (let m = 0; m < MESES_ANO; m++) saldo = saldo * (1 + im) + aporteMensal; }
     out.push(saldo);
   }
   return out;
@@ -507,12 +508,12 @@ function consolidar(){
 }
 function saldoPorGrupo(){
   // saldo de conta POR PESSOA de cada grupo ao chegar na idade-alvo (visão do beneficiário)
+  const im = Math.pow(1 + state.taxa, 1 / MESES_ANO) - 1;
   return state.roster.map(r => {
     const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
-    const aporteAnual = ap.total * MESES_ANO;
     const anos = Math.max(0, state.idadeAlvo - r.idade);
     let saldo = 0.0;
-    for (let t=0; t<anos; t++) saldo = saldo * (1 + state.taxa) + aporteAnual;
+    for (let t=0; t<anos; t++){ for (let m=0; m<MESES_ANO; m++) saldo = saldo * (1 + im) + ap.total; }
     return { nome: r.nome, saldo, anos, aporteMes: ap.total };
   });
 }
@@ -626,10 +627,10 @@ function renderVesting(){
   let total = 0, leavers = 0;
   for (const r of state.roster){
     const ap = aportesMensais(r.salario, r.idade, r.tempo, state.modelo);
-    const aporteEmpAnual = ap.empresa * MESES_ANO;
-    // saldo financiado pela empresa para cada pessoa, ao fim de um ciclo (capitalização 8% a.a.)
+    const im = Math.pow(1 + state.taxa, 1 / MESES_ANO) - 1;
+    // saldo financiado pela empresa para cada pessoa, ao fim de um ciclo (capitalização mensal)
     let saldoEmp = 0;
-    for (let t=0; t<anos; t++) saldoEmp = saldoEmp * (1 + state.taxa) + aporteEmpAnual;
+    for (let t=0; t<anos; t++){ for (let m=0; m<MESES_ANO; m++) saldoEmp = saldoEmp * (1 + im) + ap.empresa; }
     const saem = state.turnover * r.qtde;
     total += saem * naoVestido * saldoEmp;   // só a parcela NÃO vestida abate contribuições futuras
     leavers += saem;
@@ -989,11 +990,12 @@ function exportarXlsx(){
 
   const grupos=saldoPorGrupo();
   const maxAnos=Math.max(0,...grupos.map(g=>g.anos));
-  const proj=[['PROJEÇÃO DE SALDO POR PESSOA (R$; rent. '+Math.round(state.taxa*100)+'%/ano, aporte no fim do ano)'],[],
+  const proj=[['PROJEÇÃO DE SALDO POR PESSOA (R$; rent. '+Math.round(state.taxa*100)+'%/ano, aporte mensal)'],[],
     ['Ano',...grupos.map(g=>g.nome)]];
-  const saldos=grupos.map(()=>0), aportesAnuais=grupos.map(g=>g.aporteMes*12);
+  const imX=Math.pow(1+state.taxa,1/MESES_ANO)-1;
+  const saldos=grupos.map(()=>0), aportesMes=grupos.map(g=>g.aporteMes);
   for(let t=1;t<=maxAnos;t++){
-    grupos.forEach((g,gi)=>{ if(t<=g.anos) saldos[gi]=saldos[gi]*(1+state.taxa)+aportesAnuais[gi]; });
+    grupos.forEach((g,gi)=>{ if(t<=g.anos){ for(let m=0;m<MESES_ANO;m++) saldos[gi]=saldos[gi]*(1+imX)+aportesMes[gi]; } });
     proj.push([t,...saldos.map(v=>Math.round(v))]);
   }
   proj.push([],['Saldo final',...grupos.map(g=>Math.round(g.saldo))],
